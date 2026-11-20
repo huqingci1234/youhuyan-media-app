@@ -162,7 +162,7 @@ jobs:
       - name: Install Android 33 build packages
         run: |
           sdkmanager "platforms;android-33" "build-tools;33.0.2"
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "sdk.dir=$ANDROID_HOME" > television/local.properties
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build TV release APKs
