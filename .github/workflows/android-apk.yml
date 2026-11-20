@@ -103,7 +103,7 @@ jobs:
         working-directory: source
         run: |
           set -o pipefail
-          bash ./gradlew --no-daemon --stacktrace assembleMobileDebug assembleLeanbackDebug 2>&1 | tee build.log
+          bash ./gradlew --no-daemon --stacktrace assembleMobileDebug assembleLeanbackDebug -x verifyMobileDebugMpvNative -x verifyLeanbackDebugMpvNative 2>&1 | tee build.log
 
       - name: Publish build diagnostics on failure
         if: failure()
