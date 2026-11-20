@@ -148,13 +148,27 @@ jobs:
           if old not in s:
               raise SystemExit("Expected TVBoxOS applicationId not found.")
           p.write_text(s.replace(old, new, 1), encoding="utf-8")
-          p = Path("app/src/main/res/values/strings.xml")
+          # Set the app label in every values locale, not just the default locale.
+          for p in Path("app/src/main/res").glob("values*/strings.xml"):
+              s = p.read_text(encoding="utf-8")
+              import re
+              s, count = re.subn(r'(<string\\s+name="app_name">).*?(</string>)',
+                                 r'\\1尤湖沿影视\\2', s, count=1)
+              if count:
+                  p.write_text(s, encoding="utf-8")
+
+          # Remove TVBox from the generated APK filename as well.
+          p = Path("app/build.gradle")
           s = p.read_text(encoding="utf-8")
-          old = "<string name=\"app_name\">TVBox</string>"
-          new = "<string name=\"app_name\">尤湖沿影视</string>"
-          if old not in s:
-              raise SystemExit("Expected TVBox app label not found.")
-          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          s = s.replace('def fileName = "TVBox_', 'def fileName = "Youhuyan-TV_')
+          p.write_text(s, encoding="utf-8")
+
+          label = Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
+          if '<string name="app_name">尤湖沿影视</string>' not in label:
+              raise SystemExit("TV app label verification failed.")
+          gradle = Path("app/build.gradle").read_text(encoding="utf-8")
+          if 'def fileName = "TVBox_' in gradle:
+              raise SystemExit("Legacy TVBox APK filename remains.")
           PY
           cat > YOUHUYAN-SOURCE-NOTICE.md <<'EOF'
           尤湖沿影视 TV 版
