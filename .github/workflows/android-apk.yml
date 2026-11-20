@@ -1,4 +1,4 @@
-name: Build Youhuyan from FongMi TV
+name: Build Youhuyan Mobile and TV (FongMi-derived)
 
 on:
   push:
@@ -7,131 +7,132 @@ on:
 
 permissions:
   contents: write
-  issues: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
-      - name: Checkout Youhuyan project
+      - name: Checkout Youhuyan workflow
         uses: actions/checkout@v4
         with:
           path: brand
 
-      - name: Checkout FongMi TV open-source base
+      - name: Checkout complete FongMi-derived source
         uses: actions/checkout@v4
         with:
-          repository: FongMi/TV
-          ref: fongmi
+          repository: webhtv/webhtv
+          ref: main
           path: source
           fetch-depth: 0
 
-      - name: Set up Java 21
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
 
-      - name: Apply Youhuyan branding
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up Android SDK and native tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0" "ndk;29.0.14206865" "cmake;3.22.1"
+
+      - name: Apply Youhuyan branding only
         working-directory: source
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path("app/build.gradle")
-          s = p.read_text()
+          s = p.read_text(encoding="utf-8")
           old = 'applicationId "com.fongmi.android.tv"'
           new = 'applicationId "com.youhuyan.media"'
           if old not in s:
-              raise SystemExit("Could not locate the upstream applicationId; stop rather than patch the wrong source.")
-          p.write_text(s.replace(old, new, 1))
+              raise SystemExit("FongMi applicationId not found; stop rather than patch unexpected source.")
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+
           p = Path("app/src/main/res/values/strings.xml")
-          s = p.read_text()
+          s = p.read_text(encoding="utf-8")
           old = '<string name="app_name">TV</string>'
           new = '<string name="app_name">尤湖沿影视</string>'
           if old not in s:
-              raise SystemExit("Could not locate the upstream app label; stop rather than patch the wrong source.")
-          p.write_text(s.replace(old, new, 1))
+              raise SystemExit("App label not found; stop rather than patch unexpected source.")
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+
+          Path("YOUHUYAN-NOTICE.md").write_text("""尤湖沿影视 Android build
+=========================
+
+This build is based on WebHTV, an open-source Android project derived from
+FongMi/TV and the CatVod ecosystem:
+https://github.com/webhtv/webhtv
+https://github.com/FongMi/TV
+
+License: GNU General Public License v3.0 (GPL-3.0). The original license,
+copyright notices, and third-party notices are retained.
+
+Branding changes made for this build:
+- Android application ID: com.youhuyan.media
+- Display name: 尤湖沿影视
+
+No third-party video sources, live-TV lists, or JSON configuration endpoints
+are bundled by this workflow. Users must import configurations they are
+authorized to use.
+""", encoding="utf-8")
           PY
-          cat > YOUHUYAN-NOTICE.md <<'EOF'
-          尤湖沿影视 Android build
-          =========================
 
-          Open-source base: https://github.com/FongMi/TV
-          Upstream branch: fongmi
-          Upstream license: GNU General Public License v3.0 (GPL-3.0)
-
-          Branding modifications in this build:
-          - Android application ID changed to com.youhuyan.media.
-          - Display name changed to 尤湖沿影视.
-
-          The upstream source files and their original copyright and license
-          notices are retained. This project is distributed under GPL-3.0.
-          Corresponding source for this branded build is published in the
-          youhuyan-media-app repository branch named fongmi-base.
-          EOF
+      - name: Verify bundled playback dependencies
+        working-directory: source
+        run: bash scripts/verify_mpv_native_assets.sh --require-elf
 
       - name: Publish corresponding GPL source
+        working-directory: source
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-        working-directory: source
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan youhuyan-source
+          git checkout --orphan youhuyan-fongmi-source
           rm -rf .github/workflows
           git add -A
-          git commit -m "Publish GPL-3.0 FongMi TV source branded as Youhuyan Media"
+          git commit -m "Publish GPL-3.0 FongMi-derived source branded as Youhuyan Media"
           git remote remove origin
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
-          git push --force origin HEAD:refs/heads/fongmi-base
+          git push --force origin HEAD:refs/heads/youhuyan-fongmi-source
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Prepare local signing config
-        working-directory: source
-        run: |
-          keytool -genkeypair -v -keystore debug.keystore -storepass youhuyan-preview -alias youhuyan -keypass youhuyan-preview -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Youhuyan Media, OU=Android, O=Youhuyan, L=Unknown, ST=Unknown, C=CN"
-          cat > local.properties <<'EOF'
-          storeFile=../debug.keystore
-          keyAlias=youhuyan
-          storePassword=youhuyan-preview
-          EOF
-
-      - name: Build Android phone and TV APKs
+      - name: Build phone and TV APKs (32-bit and 64-bit)
         working-directory: source
         run: |
           set -o pipefail
-          bash ./gradlew --no-daemon --stacktrace assembleMobileDebug assembleLeanbackDebug -x verifyMobileDebugMpvNative -x verifyLeanbackDebugMpvNative 2>&1 | tee build.log
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace \
+            :app:assembleMobileArm64_v8aDebug \
+            :app:assembleMobileArmeabi_v7aDebug \
+            :app:assembleLeanbackArm64_v8aDebug \
+            :app:assembleLeanbackArmeabi_v7aDebug 2>&1 | tee build.log
 
-      - name: Publish build diagnostics on failure
-        if: failure()
-        working-directory: source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          if [ -f build.log ]; then
-            tail -n 220 build.log > /tmp/BUILD-FAILURE.log
-          else
-            printf "Build log was not created.\n" > /tmp/BUILD-FAILURE.log
-          fi
-          gh issue create --title "Android build diagnostics - run ${GITHUB_RUN_ID}" --body-file /tmp/BUILD-FAILURE.log
-
-      - name: Upload Gradle log
+      - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: youhuyan-gradle-build-log
+          name: youhuyan-build-log
           path: source/build.log
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 14
 
       - name: Upload Youhuyan APKs
         uses: actions/upload-artifact@v4
         with:
-          name: youhuyan-fongmi-android-apks
+          name: youhuyan-fongmi-mobile-tv-apks
           path: source/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 30
