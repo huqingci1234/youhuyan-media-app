@@ -1,4 +1,4 @@
-name: Build Youhuyan Mobile and TV (FongMi-derived)
+name: Build Youhuyan Phone and TV APKs (split upstreams)
 
 on:
   push:
@@ -9,133 +9,186 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  phone:
+    name: Phone APK - Lanxing mobile base
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 75
     steps:
-      - name: Checkout Youhuyan workflow
+      - name: Checkout brand workflow
         uses: actions/checkout@v4
         with:
           path: brand
-
-      - name: Checkout complete FongMi-derived source
+      - name: Checkout recent mobile source
         uses: actions/checkout@v4
         with:
-          repository: webhtv/webhtv
-          ref: main
-          path: source
+          repository: cyj265/lanxing-vod
+          ref: dev-5.6.1
+          path: phone
           fetch-depth: 0
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: Set up Android SDK and native tools
-        uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
-
-      - name: Install Android build packages
-        run: |
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;29.0.14206865" "cmake;3.22.1"
-
-      - name: Apply Youhuyan branding only
-        working-directory: source
+      - name: Apply Youhuyan phone branding
+        working-directory: phone
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path("app/build.gradle")
           s = p.read_text(encoding="utf-8")
-          old = 'applicationId "com.fongmi.android.tv"'
+          old = 'applicationId "com.cyj265.lanxingvod"'
           new = 'applicationId "com.youhuyan.media"'
           if old not in s:
-              raise SystemExit("FongMi applicationId not found; stop rather than patch unexpected source.")
+              raise SystemExit("Expected Lanxing applicationId not found.")
           p.write_text(s.replace(old, new, 1), encoding="utf-8")
-
           p = Path("app/src/main/res/values/strings.xml")
           s = p.read_text(encoding="utf-8")
-          old = '<string name="app_name">TV</string>'
-          new = '<string name="app_name">尤湖沿影视</string>'
+          old = "<string name=\"app_name\">揽星影视</string>"
+          new = "<string name=\"app_name\">尤湖沿影视</string>"
           if old not in s:
-              raise SystemExit("App label not found; stop rather than patch unexpected source.")
+              raise SystemExit("Expected mobile app label not found.")
           p.write_text(s.replace(old, new, 1), encoding="utf-8")
           PY
-          cat > YOUHUYAN-NOTICE.md <<'EOF'
-          Youhuyan Media Android build
-          =============================
-
-          Based on WebHTV, an open-source Android project derived from FongMi/TV
-          and the CatVod ecosystem:
-          https://github.com/webhtv/webhtv
-          https://github.com/FongMi/TV
-
-          License: GNU General Public License v3.0 (GPL-3.0). Original license,
-          copyright notices, and third-party notices are retained.
-
-          Branding changes:
-          - Android application ID: com.youhuyan.media
-          - Display name: 尤湖沿影视
-
-          No third-party video sources, live-TV lists, or JSON configuration
-          endpoints are bundled. Users must import configurations they are
-          authorized to use.
+          cat > YOUHUYAN-SOURCE-NOTICE.md <<'EOF'
+          尤湖沿影视手机版
+          Based on https://github.com/cyj265/lanxing-vod (GPL-3.0).
+          Original copyright notices and license files are retained.
+          Branding changes: applicationId com.youhuyan.media; app label 尤湖沿影视.
+          No video source, live channel list, or third-party JSON endpoint is bundled.
+          Users must import configurations they are authorized to use.
           EOF
-
-      - name: Verify bundled playback dependencies
-        working-directory: source
-        run: bash scripts/verify_mpv_native_assets.sh --require-elf
-
-      - name: Set up Gradle cache
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android 37 build packages
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-
-      - name: Build phone and TV APKs (32-bit and 64-bit)
-        working-directory: source
+      - name: Build phone release APK
+        working-directory: phone
         run: |
           set -o pipefail
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace \
-            :app:assembleMobileArm64_v8aDebug \
-            :app:assembleMobileArmeabi_v7aDebug \
-            :app:assembleLeanbackArm64_v8aDebug \
-            :app:assembleLeanbackArmeabi_v7aDebug 2>&1 | tee build.log
-
-      - name: Publish corresponding GPL source
+          ./gradlew --no-daemon --stacktrace :app:assembleMobileArm64_v8aRelease 2>&1 | tee build-phone.log
+      - name: Publish modified GPL phone source
         if: success()
-        working-directory: source
+        working-directory: phone
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan youhuyan-fongmi-source
-          rm -rf .github/workflows
           git add -A
-          git commit -m "Publish GPL-3.0 FongMi-derived source branded as Youhuyan Media"
-          git remote remove origin
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
-          git push --force origin HEAD:refs/heads/youhuyan-fongmi-source
-
-      - name: Upload build log
+          git commit -m "Brand Lanxing mobile source as Youhuyan Media"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/youhuyan-mobile-source
+      - name: Upload phone build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: youhuyan-build-log
-          path: source/build.log
+          name: youhuyan-phone-build-log
+          path: phone/build-phone.log
           if-no-files-found: ignore
           retention-days: 14
-
-      - name: Upload Youhuyan APKs
+      - name: Upload Youhuyan phone APK
         uses: actions/upload-artifact@v4
         with:
-          name: youhuyan-fongmi-mobile-tv-apks
-          path: source/app/build/outputs/apk/**/*.apk
+          name: youhuyan-phone-apk
+          path: phone/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  tv:
+    name: TV APK - TVBoxOS base
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout brand workflow
+        uses: actions/checkout@v4
+        with:
+          path: brand
+      - name: Checkout TVBoxOS source
+        uses: actions/checkout@v4
+        with:
+          repository: q215613905/TVBoxOS
+          ref: main
+          path: television
+          fetch-depth: 0
+      - name: Apply Youhuyan TV branding
+        working-directory: television
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/build.gradle")
+          s = p.read_text(encoding="utf-8")
+          old = "applicationId 'com.github.tvbox.osc.jun'"
+          new = "applicationId 'com.youhuyan.media.tv'"
+          if old not in s:
+              raise SystemExit("Expected TVBoxOS applicationId not found.")
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          p = Path("app/src/main/res/values/strings.xml")
+          s = p.read_text(encoding="utf-8")
+          old = "<string name=\"app_name\">TVBox</string>"
+          new = "<string name=\"app_name\">尤湖沿影视</string>"
+          if old not in s:
+              raise SystemExit("Expected TVBox app label not found.")
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          PY
+          cat > YOUHUYAN-SOURCE-NOTICE.md <<'EOF'
+          尤湖沿影视 TV 版
+          Based on https://github.com/q215613905/TVBoxOS (AGPL-3.0).
+          Original copyright notices and license files are retained.
+          Branding changes: applicationId com.youhuyan.media.tv; app label 尤湖沿影视.
+          No video source, live channel list, or third-party JSON endpoint is bundled.
+          Users must import configurations they are authorized to use.
+          EOF
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android 33 build packages
+        run: sdkmanager "platforms;android-33" "build-tools;33.0.2"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build TV release APKs
+        working-directory: television
+        run: |
+          set -o pipefail
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace :app:assembleJavaRelease :app:assembleJava32Release :app:assembleJava64Release 2>&1 | tee build-tv.log
+      - name: Publish modified AGPL TV source
+        if: success()
+        working-directory: television
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Brand TVBoxOS source as Youhuyan Media TV"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/youhuyan-tv-source
+      - name: Upload TV build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youhuyan-tv-build-log
+          path: television/build-tv.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload Youhuyan TV APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: youhuyan-tv-apks
+          path: television/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 30
