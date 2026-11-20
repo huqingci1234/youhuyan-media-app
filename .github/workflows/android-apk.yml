@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   build:
@@ -109,22 +110,23 @@ jobs:
         working-directory: source
         env:
           GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
+          GH_REPO: ${{ github.repository }}
         run: |
           if [ -f build.log ]; then
             tail -n 220 build.log > /tmp/BUILD-FAILURE.log
           else
             printf "Build log was not created.\n" > /tmp/BUILD-FAILURE.log
           fi
-          git checkout --orphan build-diagnostics
-          cp /tmp/BUILD-FAILURE.log BUILD-FAILURE.log
-          git add BUILD-FAILURE.log
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Publish Android build diagnostics"
-          git remote remove origin
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
-          git push --force origin HEAD:refs/heads/build-diagnostics
+          gh issue create --title "Android build diagnostics - run ${GITHUB_RUN_ID}" --body-file /tmp/BUILD-FAILURE.log
+
+      - name: Upload Gradle log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youhuyan-gradle-build-log
+          path: source/build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload Youhuyan APKs
         uses: actions/upload-artifact@v4
