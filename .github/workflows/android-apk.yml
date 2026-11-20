@@ -64,47 +64,31 @@ jobs:
           if old not in s:
               raise SystemExit("App label not found; stop rather than patch unexpected source.")
           p.write_text(s.replace(old, new, 1), encoding="utf-8")
-
-          Path("YOUHUYAN-NOTICE.md").write_text("""尤湖沿影视 Android build
-=========================
-
-This build is based on WebHTV, an open-source Android project derived from
-FongMi/TV and the CatVod ecosystem:
-https://github.com/webhtv/webhtv
-https://github.com/FongMi/TV
-
-License: GNU General Public License v3.0 (GPL-3.0). The original license,
-copyright notices, and third-party notices are retained.
-
-Branding changes made for this build:
-- Android application ID: com.youhuyan.media
-- Display name: 尤湖沿影视
-
-No third-party video sources, live-TV lists, or JSON configuration endpoints
-are bundled by this workflow. Users must import configurations they are
-authorized to use.
-""", encoding="utf-8")
           PY
+          cat > YOUHUYAN-NOTICE.md <<'EOF'
+          Youhuyan Media Android build
+          =============================
+
+          Based on WebHTV, an open-source Android project derived from FongMi/TV
+          and the CatVod ecosystem:
+          https://github.com/webhtv/webhtv
+          https://github.com/FongMi/TV
+
+          License: GNU General Public License v3.0 (GPL-3.0). Original license,
+          copyright notices, and third-party notices are retained.
+
+          Branding changes:
+          - Android application ID: com.youhuyan.media
+          - Display name: 尤湖沿影视
+
+          No third-party video sources, live-TV lists, or JSON configuration
+          endpoints are bundled. Users must import configurations they are
+          authorized to use.
+          EOF
 
       - name: Verify bundled playback dependencies
         working-directory: source
         run: bash scripts/verify_mpv_native_assets.sh --require-elf
-
-      - name: Publish corresponding GPL source
-        working-directory: source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan youhuyan-fongmi-source
-          rm -rf .github/workflows
-          git add -A
-          git commit -m "Publish GPL-3.0 FongMi-derived source branded as Youhuyan Media"
-          git remote remove origin
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
-          git push --force origin HEAD:refs/heads/youhuyan-fongmi-source
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
@@ -119,6 +103,23 @@ authorized to use.
             :app:assembleMobileArmeabi_v7aDebug \
             :app:assembleLeanbackArm64_v8aDebug \
             :app:assembleLeanbackArmeabi_v7aDebug 2>&1 | tee build.log
+
+      - name: Publish corresponding GPL source
+        if: success()
+        working-directory: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan youhuyan-fongmi-source
+          rm -rf .github/workflows
+          git add -A
+          git commit -m "Publish GPL-3.0 FongMi-derived source branded as Youhuyan Media"
+          git remote remove origin
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/youhuyan-fongmi-source
 
       - name: Upload build log
         if: always()
