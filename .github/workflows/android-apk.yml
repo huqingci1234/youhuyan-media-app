@@ -100,7 +100,31 @@ jobs:
 
       - name: Build Android phone and TV APKs
         working-directory: source
-        run: ./gradlew --no-daemon --stacktrace assembleMobileDebug assembleLeanbackDebug
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace assembleMobileDebug assembleLeanbackDebug 2>&1 | tee build.log
+
+      - name: Publish build diagnostics on failure
+        if: failure()
+        working-directory: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ -f build.log ]; then
+            tail -n 220 build.log > /tmp/BUILD-FAILURE.log
+          else
+            printf "Build log was not created.\n" > /tmp/BUILD-FAILURE.log
+          fi
+          git checkout --orphan build-diagnostics
+          cp /tmp/BUILD-FAILURE.log BUILD-FAILURE.log
+          git add BUILD-FAILURE.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Publish Android build diagnostics"
+          git remote remove origin
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/build-diagnostics
 
       - name: Upload Youhuyan APKs
         uses: actions/upload-artifact@v4
