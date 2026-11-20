@@ -1,0 +1,115 @@
+name: Build Youhuyan Legacy Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/legacy-android.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-legacy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Youhuyan project
+        uses: actions/checkout@v4
+        with:
+          path: brand
+
+      - name: Checkout AGPL-3.0 Android legacy TVBox base
+        uses: actions/checkout@v4
+        with:
+          repository: mlabalabala/box
+          ref: main
+          path: source
+          fetch-depth: 0
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "11"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 30 SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-30" "build-tools;30.0.3"
+
+      - name: Apply Youhuyan legacy branding and remove upstream signing key
+        working-directory: source
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/build.gradle")
+          s = p.read_text()
+          s = s.replace("applicationId 'tv.org.eu.bunnyabc'", "applicationId 'com.youhuyan.legacy'")
+          s = s.replace("versionCode 27", "versionCode 1")
+          s = s.replace("versionName '0.0.0'", "versionName '1.0-legacy'")
+          start = s.find("    signingConfigs {")
+          if start >= 0:
+              end = s.find("\n    }", start)
+              if end < 0:
+                  raise SystemExit("Could not safely locate upstream signing config")
+              s = s[:start] + s[end + 7:]
+          s = s.replace("        signingConfig signingConfigs.sigin\n", "")
+          p.write_text(s)
+          p = Path("app/src/main/res/values/strings.xml")
+          s = p.read_text()
+          old = '<string name="app_name">Jade</string>'
+          if old not in s:
+              raise SystemExit("Could not locate legacy app label")
+          p.write_text(s.replace(old, '<string name="app_name">尤湖沿影视经典版</string>', 1))
+          key = Path("app/BUNNY.jks")
+          if key.exists():
+              key.unlink()
+          Path("YOUHUYAN-LEGACY-NOTICE.md").write_text(
+              "尤湖沿影视经典版 Android 4.1+ compatibility build\n"
+              "Open-source base: https://github.com/mlabalabala/box\n"
+              "Upstream license: GNU Affero General Public License v3.0 (AGPL-3.0)\n"
+              "Changes: app label, application ID, version metadata; upstream signing key removed.\n"
+              "This build is distributed under AGPL-3.0. Corresponding source is published\n"
+              "in the youhuyan-media-app repository branch legacy-android-source.\n"
+              "Only use video sources and media for which you have authorization.\n"
+          )
+          PY
+
+      - name: Publish corresponding AGPL source
+        working-directory: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git checkout --orphan youhuyan-legacy-source
+          rm -rf .github/workflows
+          rm -f app/BUNNY.jks
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Publish Youhuyan legacy Android source under AGPL-3.0"
+          git remote remove origin
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/legacy-android-source
+
+      - name: Build legacy APK
+        working-directory: source
+        run: |
+          chmod +x gradlew
+          printf "sdk.dir=%s\n" "$ANDROID_HOME" > local.properties
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee legacy-build.log
+
+      - name: Upload legacy APK and build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youhuyan-legacy-android-4.1-plus
+          path: |
+            source/app/build/outputs/apk/debug/*.apk
+            source/legacy-build.log
+          if-no-files-found: warn
+          retention-days: 30
