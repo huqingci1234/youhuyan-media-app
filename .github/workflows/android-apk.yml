@@ -30,26 +30,38 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
+          # Replace visible legacy branding in all Android XML resources.
+          for p in Path("app/src").rglob("*.xml"):
+              s = p.read_text(encoding="utf-8")
+              updated = s.replace("揽星影视", "尤湖沿影视").replace("揽星视频", "尤湖沿影视")
+              if updated != s:
+                  p.write_text(updated, encoding="utf-8")
+
           p = Path("app/build.gradle")
           s = p.read_text(encoding="utf-8")
           old = 'applicationId "com.cyj265.lanxingvod"'
           new = 'applicationId "com.youhuyan.media"'
-          if old not in s:
-              raise SystemExit("Expected Lanxing applicationId not found.")
-          p.write_text(s.replace(old, new, 1), encoding="utf-8")
-          p = Path("app/src/main/res/values/strings.xml")
-          s = p.read_text(encoding="utf-8")
-          old = "<string name=\"app_name\">揽星影视</string>"
-          new = "<string name=\"app_name\">尤湖沿影视</string>"
-          if old not in s:
-              raise SystemExit("Expected mobile app label not found.")
-          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          if old not in s and new not in s:
+              raise SystemExit("Expected mobile applicationId not found.")
+          s = s.replace(old, new, 1)
+          s = s.replace('output.outputFileName.set("揽星影视-${mode}-${abi}-${buildNumber}.apk")',
+                        'output.outputFileName.set("Youhuyan-${mode}-${abi}-${buildNumber}.apk")')
+          p.write_text(s, encoding="utf-8")
+
+          # Verify locale-specific labels and visible resources no longer use the old brand.
+          for name in ["app/src/main/res/values/strings.xml",
+                       "app/src/main/res/values-zh-rCN/strings.xml",
+                       "app/src/main/res/values-zh-rTW/strings.xml"]:
+              data = Path(name).read_text(encoding="utf-8")
+              if '<string name="app_name">尤湖沿影视</string>' not in data:
+                  raise SystemExit(f"Brand label verification failed: {name}")
           PY
           cat > YOUHUYAN-SOURCE-NOTICE.md <<'EOF'
           尤湖沿影视手机版
           Based on https://github.com/cyj265/lanxing-vod (GPL-3.0).
           Original copyright notices and license files are retained.
-          Branding changes: applicationId com.youhuyan.media; app label 尤湖沿影视.
+          Branding changes: applicationId com.youhuyan.media; all localized app labels and visible brand strings use 尤湖沿影视.
           No video source, live channel list, or third-party JSON endpoint is bundled.
           Users must import configurations they are authorized to use.
           EOF
