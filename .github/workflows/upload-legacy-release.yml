@@ -1,6 +1,10 @@
 name: Add legacy APK to preview release
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/upload-legacy-release.yml"
   workflow_dispatch:
 
 permissions:
