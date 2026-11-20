@@ -93,7 +93,7 @@ jobs:
         run: |
           keytool -genkeypair -v -keystore debug.keystore -storepass youhuyan-preview -alias youhuyan -keypass youhuyan-preview -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Youhuyan Media, OU=Android, O=Youhuyan, L=Unknown, ST=Unknown, C=CN"
           cat > local.properties <<'EOF'
-          storeFile=debug.keystore
+          storeFile=../debug.keystore
           keyAlias=youhuyan
           storePassword=youhuyan-preview
           EOF
