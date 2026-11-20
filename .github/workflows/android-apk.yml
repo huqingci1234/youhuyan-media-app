@@ -31,6 +31,9 @@ jobs:
       - name: Generate Android platform project
         run: flutter create --platforms=android --org com.youhuyan .
 
+      - name: Remove generated placeholder test
+        run: rm -f test/widget_test.dart
+
       - name: Install dependencies
         run: flutter pub get
 
