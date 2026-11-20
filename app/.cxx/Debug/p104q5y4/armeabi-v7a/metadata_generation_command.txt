@@ -1,0 +1,19 @@
+                        -H/home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/src/main/cpp
+-DCMAKE_SYSTEM_NAME=Android
+-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-DCMAKE_SYSTEM_VERSION=24
+-DANDROID_ABI=armeabi-v7a
+-DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a
+-DANDROID_NDK=/usr/local/lib/android/sdk/ndk/29.0.14206865
+-DCMAKE_ANDROID_NDK=/usr/local/lib/android/sdk/ndk/29.0.14206865
+-DCMAKE_TOOLCHAIN_FILE=/usr/local/lib/android/sdk/ndk/29.0.14206865/build/cmake/android.toolchain.cmake
+-DCMAKE_MAKE_PROGRAM=/usr/local/lib/android/sdk/cmake/3.22.1/bin/ninja
+-DCMAKE_CXX_FLAGS=-std=c++20 -Wall -Wextra -Werror=return-type
+-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/build/intermediates/cxx/Debug/p104q5y4/obj/armeabi-v7a
+-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/build/intermediates/cxx/Debug/p104q5y4/obj/armeabi-v7a
+-DCMAKE_BUILD_TYPE=Debug
+-B/home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/.cxx/Debug/p104q5y4/armeabi-v7a
+-GNinja
+-DANDROID_PLATFORM=android-26
+                        Build command args: []
+                        Version: 2

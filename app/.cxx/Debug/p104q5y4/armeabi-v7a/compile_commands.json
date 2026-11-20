@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/.cxx/Debug/p104q5y4/armeabi-v7a",
+  "command": "/usr/local/lib/android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=armv7-none-linux-androideabi26 --sysroot=/usr/local/lib/android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DPL_HAVE_PTHREAD -DPL_STATIC -DPTHREAD_HAS_SETCLOCK -Dexo_dovi_renderer_EXPORTS -I/home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/src/main/cpp/../../../../third_party/exo-dv5-native/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -std=c++20 -Wall -Wextra -Werror=return-type -fno-limit-debug-info  -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -o CMakeFiles/exo_dovi_renderer.dir/exo_dovi_renderer.cpp.o -c /home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/src/main/cpp/exo_dovi_renderer.cpp",
+  "file": "/home/runner/work/youhuyan-media-app/youhuyan-media-app/source/app/src/main/cpp/exo_dovi_renderer.cpp"
+}
+]
