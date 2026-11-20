@@ -1,0 +1,43 @@
+name: Add legacy APK to preview release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  upload-legacy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download legacy Android 4.1 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: youhuyan-legacy-android-4.1-plus
+          path: legacy
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 44767333958
+
+      - name: Prepare legacy APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          mapfile -d '' apks < <(find legacy -type f -name '*.apk' -print0)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "Expected exactly one legacy APK, found ${#apks[@]}"
+            find legacy -maxdepth 4 -type f -print
+            exit 1
+          fi
+          cp "${apks[0]}" "release-assets/尤湖沿影视-旧版-Android4.1方向-待设备验证.apk"
+          ls -lh release-assets
+
+      - name: Upload legacy APK to existing preview release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload v0.1.0-rc.27 release-assets/*.apk \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
