@@ -1,0 +1,68 @@
+name: Publish Youhuyan APK Release
+
+on:
+  workflow_run:
+    workflows: ["Build Youhuyan Phone and TV APKs (split upstreams)"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download phone APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: youhuyan-phone-apk
+          path: phone-apks
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Download TV APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: youhuyan-tv-apks
+          path: tv-apks
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Prepare and verify release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          phone_count=0
+          tv_count=0
+          while IFS= read -r -d '' file; do
+            name="$(basename "$file")"
+            cp "$file" "release-assets/尤湖沿影视-手机版-$name"
+            phone_count=$((phone_count + 1))
+          done < <(find phone-apks -type f -name '*.apk' -print0)
+          while IFS= read -r -d '' file; do
+            name="$(basename "$file")"
+            cp "$file" "release-assets/尤湖沿影视-TV版-$name"
+            tv_count=$((tv_count + 1))
+          done < <(find tv-apks -type f -name '*.apk' -print0)
+          test "$phone_count" -ge 1
+          test "$tv_count" -ge 1
+          ls -lh release-assets
+
+      - name: Publish preview release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          tag="v0.1.0-rc.${RUN_NUMBER}"
+          gh release create "$tag" release-assets/*.apk \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "$HEAD_SHA" \
+            --title "尤湖沿影视 ${tag}" \
+            --prerelease \
+            --notes "Phone and TV APKs from successful GitHub Actions run #${RUN_NUMBER}. Preview build; device compatibility testing is not yet confirmed. No third-party video sources, live channel lists, or JSON endpoints are bundled."
