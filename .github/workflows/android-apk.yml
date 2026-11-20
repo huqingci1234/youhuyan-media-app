@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   phone:
@@ -87,6 +86,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -r --cached .github/workflows || true
           git add -u
           git add YOUHUYAN-SOURCE-NOTICE.md
           git commit -m "Brand Lanxing mobile source as Youhuyan Media"
