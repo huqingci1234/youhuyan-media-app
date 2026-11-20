@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   build:
@@ -78,13 +77,13 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/build.gradle app/src/main/res/values/strings.xml YOUHUYAN-NOTICE.md
-          if ! git diff --cached --quiet; then
-            git commit -m "Brand FongMi TV as Youhuyan Media"
-          fi
+          git checkout --orphan youhuyan-source
+          rm -rf .github/workflows
+          git add -A
+          git commit -m "Publish GPL-3.0 FongMi TV source branded as Youhuyan Media"
           git remote remove origin
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
-          git push origin HEAD:refs/heads/fongmi-base
+          git push --force origin HEAD:refs/heads/fongmi-base
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
