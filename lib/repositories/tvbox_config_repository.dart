@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
-import 'package:sqflite_common/sqlite_api.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../models/tvbox_config_entry.dart';
@@ -31,9 +30,15 @@ class TvBoxConfigRepository {
     required String databasePath,
     DateTime Function()? clock,
     TvBoxConfigValidator? validator,
-  })  : _databaseFactory = databaseFactory,
-        _databasePath = databasePath,
-        _clock = clock ?? DateTime.now,
+  })  : _clock = clock ?? DateTime.now,
+        _validator = validator ?? const TvBoxConfigValidator();
+
+  TvBoxConfigRepository._internal({
+    required this._databaseFactory,
+    required this._databasePath,
+    DateTime Function()? clock,
+    TvBoxConfigValidator? validator,
+  })  : _clock = clock ?? DateTime.now,
         _validator = validator ?? const TvBoxConfigValidator();
 
   final DatabaseFactory _databaseFactory;
