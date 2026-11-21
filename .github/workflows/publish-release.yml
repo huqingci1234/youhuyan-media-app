@@ -40,12 +40,12 @@ jobs:
           tv_count=0
           while IFS= read -r -d '' file; do
             name="$(basename "$file")"
-            cp "$file" "release-assets/尤湖沿影视-手机版-$name"
+            cp "$file" "release-assets/Youhuyan-Phone-$name"
             phone_count=$((phone_count + 1))
           done < <(find phone-apks -type f -name '*.apk' -print0)
           while IFS= read -r -d '' file; do
             name="$(basename "$file")"
-            cp "$file" "release-assets/尤湖沿影视-TV版-$name"
+            cp "$file" "release-assets/Youhuyan-TV-$name"
             tv_count=$((tv_count + 1))
           done < <(find tv-apks -type f -name '*.apk' -print0)
           test "$phone_count" -ge 1

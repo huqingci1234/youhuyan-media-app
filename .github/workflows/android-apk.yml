@@ -31,6 +31,13 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
+          # This upstream branch intentionally ships with no built-in depot or source list.
+          depot = Path("app/src/main/java/com/fongmi/android/tv/bean/BuiltinDepot.java").read_text(encoding="utf-8")
+          if 'public static final String URL = null;' not in depot or 'public static final String EXTRA_YL_URL = "";' not in depot:
+              raise SystemExit("Unexpected built-in mobile source configuration; refusing to bundle it.")
+          if Path("app/src/main/assets/clys/chenlong.jpg").exists():
+              raise SystemExit("Unexpected built-in mobile source depot asset; refusing to bundle it.")
+
           # Replace visible legacy branding in all Android XML resources.
           for p in Path("app/src").rglob("*.xml"):
               s = p.read_text(encoding="utf-8")
@@ -152,10 +159,18 @@ jobs:
           for p in Path("app/src/main/res").glob("values*/strings.xml"):
               s = p.read_text(encoding="utf-8")
               import re
-              s, count = re.subn(r'(<string\\s+name="app_name">).*?(</string>)',
-                                 r'\\1尤湖沿影视\\2', s, count=1)
+              s, count = re.subn(r'(<string\s+name="app_name">).*?(</string>)',
+                                 r'\1尤湖沿影视\2', s, count=1, flags=re.S)
               if count:
                   p.write_text(s, encoding="utf-8")
+
+          # Keep EPG support available but ship no preloaded channel-name list or third-party logo URLs.
+          epg = Path("app/src/main/assets/epg_data.json")
+          if epg.exists():
+              epg.write_text('{"epgs":[]}\n', encoding="utf-8")
+          import json
+          if epg.exists() and json.loads(epg.read_text(encoding="utf-8")).get("epgs") != []:
+              raise SystemExit("Bundled EPG channel metadata was not cleared.")
 
           # Remove TVBox from the generated APK filename as well.
           p = Path("app/build.gradle")
