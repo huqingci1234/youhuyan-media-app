@@ -39,7 +39,7 @@ class TvBoxConfigValidator {
     try {
       decoded = jsonDecode(rawJson);
     } on FormatException catch (error) {
-      throw FormatException('JSON 格式无效：\${error.message}');
+      throw FormatException('JSON 格式无效：' + error.message.toString());
     }
 
     if (decoded is! Map<String, dynamic>) {
