@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: flutter-independent-\${{ github.ref }}
+  group: flutter-independent-ci
   cancel-in-progress: true
 
 jobs:
