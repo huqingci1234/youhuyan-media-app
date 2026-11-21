@@ -8,7 +8,7 @@ import 'package:sqflite_common/sqlite_api.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../models/tvbox_config_entry.dart';
-import 'tvbox_config_validator.dart';
+import '../services/tvbox_config_validator.dart';
 
 class DuplicateConfigUrlException implements Exception {
   const DuplicateConfigUrlException();
@@ -349,6 +349,7 @@ class TvBoxConfigRepository {
   Future<void> recordRefreshFailure(int id, String error) async {
     final database = await _database;
     final message = error.trim().isEmpty ? '刷新失败' : error.trim();
+    final now = _nowIso();
     final changed = await database.update(
       'config_sources',
       {
@@ -356,8 +357,8 @@ class TvBoxConfigRepository {
         'last_error': message.length > 1000
             ? message.substring(0, 1000)
             : message,
-        'updated_at': _nowIso(),
-        'last_attempt_at': _nowIso(),
+        'updated_at': now,
+        'last_attempt_at': now,
       },
       where: 'id = ?',
       whereArgs: [id],
