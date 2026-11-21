@@ -85,8 +85,8 @@ class TvBoxConfigValidator {
           scheme: 'https',
           host: uri.host.toLowerCase(),
           port: uri.port == 443 ? null : uri.port,
-          fragment: '',
         )
+        .removeFragment()
         .normalizePath();
 
     return normalized.toString();
