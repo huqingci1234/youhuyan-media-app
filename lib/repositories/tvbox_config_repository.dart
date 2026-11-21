@@ -25,21 +25,26 @@ class DuplicateConfigUrlException implements Exception {
 /// Favorites and watch history are separate tables with no foreign key to
 /// config_sources, so switching or deleting a config cannot clear them.
 class TvBoxConfigRepository {
-  TvBoxConfigRepository({
+  factory TvBoxConfigRepository({
     required DatabaseFactory databaseFactory,
     required String databasePath,
     DateTime Function()? clock,
     TvBoxConfigValidator? validator,
-  })  : _clock = clock ?? DateTime.now,
-        _validator = validator ?? const TvBoxConfigValidator();
+  }) {
+    return TvBoxConfigRepository._(
+      databaseFactory,
+      databasePath,
+      clock ?? DateTime.now,
+      validator ?? const TvBoxConfigValidator(),
+    );
+  }
 
-  TvBoxConfigRepository._internal({
-    required this._databaseFactory,
-    required this._databasePath,
-    DateTime Function()? clock,
-    TvBoxConfigValidator? validator,
-  })  : _clock = clock ?? DateTime.now,
-        _validator = validator ?? const TvBoxConfigValidator();
+  TvBoxConfigRepository._(
+    this._databaseFactory,
+    this._databasePath,
+    this._clock,
+    this._validator,
+  );
 
   final DatabaseFactory _databaseFactory;
   final String _databasePath;
