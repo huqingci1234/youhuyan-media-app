@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../models/tvbox_config_entry.dart';
-import '../repositories/tvbox_configrepository.dart';
-import 'tvbox_configvalidator.dart';
+import '../repositories/tvbox_config_repository.dart';
+import 'tvbox_config_validator.dart';
 
 /// Imports user-owned or otherwise authorized TVBox JSON as inert data.
 ///
