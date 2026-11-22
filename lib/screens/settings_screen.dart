@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -38,7 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
       setState(() {
         _repository = repository;
-        _importService = TvBoxConfigImportService(repository: repository);
+        _importService = TvBoxConfigImportService(_repository: repository);
         _configs = configs;
         _initializing = false;
       });
@@ -86,7 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _perform(() async {
       final entry = await _importService!.importRemote(url: url);
       _urlController.clear();
-      _showMessage('已添加配置：' + entry.name);
+      _showMessage('已添加配置：${entry.name}');
     });
   }
 
@@ -99,7 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (file == null) return;
 
       final length = file.lengthSync() ?? await file.length();
-      if (length > TvBoxConfigValidator.maxDocumentBytes) {
+      if (length != null && length > TvBoxConfigValidator.maxDocumentBytes) {
         setState(() => _error = '本地 JSON 文件超过 2 MiB 限制');
         return;
       }
@@ -109,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fileName: file.name,
           bytes: file.readAsByteStream(),
         );
-        _showMessage('已导入本地配置：' + entry.name);
+        _showMessage('已导入本地配置：${entry.name}');
       });
     } catch (error) {
       if (mounted) setState(() => _error = _friendlyError(error));
@@ -119,14 +120,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _setDefault(TvBoxConfigEntry entry) async {
     await _perform(() async {
       await _repository!.setDefaultConfig(entry.id);
-      _showMessage('默认接口已切换为：' + entry.name);
+      _showMessage('默认接口已切换为：${entry.name}');
     });
   }
 
   Future<void> _refresh(TvBoxConfigEntry entry) async {
     await _perform(() async {
       await _importService!.refreshRemote(entry.id);
-      _showMessage('刷新成功：' + entry.name);
+      _showMessage('刷新成功：${entry.name}');
     });
   }
 
@@ -209,7 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('删除接口？'),
-        content: Text('将删除本地保存的「' + entry.name + '」配置缓存。收藏和观看历史不会被删除。'),
+        content: Text('将删除本地保存的「${entry.name}」配置缓存。收藏和观看历史不会被删除。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -327,7 +328,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Expanded(
               child: Text('已保存的接口', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
-            Text(_configs.length.toString() + ' 个', style: const TextStyle(color: Colors.white60)),
+            Text('${_configs.length} 个', style: const TextStyle(color: Colors.white60)),
           ],
         ),
         const SizedBox(height: 10),
@@ -393,20 +394,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               spacing: 16,
               runSpacing: 6,
               children: [
-                Text('站点 ' + entry.siteCount.toString()),
-                Text('直播 ' + entry.liveCount.toString()),
-                Text('解析 ' + entry.parseCount.toString()),
+                Text('站点 ${entry.siteCount}'),
+                Text('直播 ${entry.liveCount}'),
+                Text('解析 ${entry.parseCount}'),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              _statusText(entry.lastStatus) + ' · 上次成功：' + _dateText(entry.lastSuccessAt),
+              '${_statusText(entry.lastStatus)} · 上次成功：${_dateText(entry.lastSuccessAt)}',
               style: const TextStyle(color: Colors.white60, fontSize: 12),
             ),
             if (entry.lastError != null && entry.lastError!.isNotEmpty) ...[
               const SizedBox(height: 5),
               Text(
-                '错误：' + entry.lastError!,
+                '错误：${entry.lastError!}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.redAccent, fontSize: 12),
@@ -431,7 +432,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : () => _editUrl(entry),
-                    icon: const Icon(Icons.edit_link),
+                    icon: const Icon(Icons.edit),
                     label: const Text('修改地址'),
                   ),
                 ],

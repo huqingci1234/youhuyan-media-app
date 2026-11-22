@@ -15,13 +15,11 @@ import 'tvbox_config_validator.dart';
 /// deadline. No imported spider, script, JAR, or plugin is ever executed.
 class TvBoxConfigImportService {
   TvBoxConfigImportService({
-    required TvBoxConfigRepository repository,
-    TvBoxConfigValidator validator = const TvBoxConfigValidator(),
+    required this._repository,
+    this._validator = const TvBoxConfigValidator(),
     http.Client Function()? clientFactory,
     this.requestTimeout = const Duration(seconds: 20),
-  })  : _repository = repository,
-        _validator = validator,
-        _clientFactory = clientFactory ?? http.Client.new;
+  }) : _clientFactory = clientFactory ?? http.Client.new;
 
   final TvBoxConfigRepository _repository;
   final TvBoxConfigValidator _validator;
@@ -72,7 +70,13 @@ class TvBoxConfigImportService {
     String? name,
   }) async {
     final normalizedUrl = _validator.normalizeHttpsUrl(url);
-    final rawJson = await _downloadJson(normalizedUrl);
+    final String rawJson;
+    try {
+      rawJson = await _downloadJson(normalizedUrl);
+    } catch (error) {
+      await _repository.recordRefreshFailure(id, _errorMessage(error));
+      rethrow;
+    }
     return _repository.updateConfig(
       id: id,
       rawJson: rawJson,
@@ -88,8 +92,8 @@ class TvBoxConfigImportService {
     final deadline = DateTime.now().add(requestTimeout);
     final content = await _readLimitedStream(bytes, deadline);
     final rawJson = utf8.decode(content, allowMalformed: false);
-    _validator.validate(rawJson, fallbackName: fileName);
-    return _repository.addConfig(rawJson: rawJson, name: fileName);
+    final document = _validator.validate(rawJson, fallbackName: fileName);
+    return _repository.addConfig(rawJson: rawJson, name: document.documentName);
   }
 
   Future<String> _downloadJson(String input) async {
@@ -108,7 +112,7 @@ class TvBoxConfigImportService {
             .send(request)
             .timeout(_remaining(deadline), onTimeout: () {
           throw TimeoutException(
-            '配置下载超过 ' + requestTimeout.inSeconds.toString() + ' 秒',
+            '配置下载超过 ${requestTimeout.inSeconds} 秒',
           );
         });
 
@@ -132,10 +136,11 @@ class TvBoxConfigImportService {
 
         if (response.statusCode != 200) {
           await _cancelStream(response.stream);
-          throw StateError('配置服务器返回 HTTP ' + response.statusCode.toString());
+          throw StateError('配置服务器返回 HTTP ${response.statusCode}');
         }
 
-        if (response.contentLength > maxDocumentBytes) {
+        final contentLength = response.contentLength;
+        if (contentLength != null && contentLength > maxDocumentBytes) {
           await _cancelStream(response.stream);
           throw const FormatException('远程配置超过 2 MiB 大小限制');
         }
@@ -165,7 +170,7 @@ class TvBoxConfigImportService {
           remaining,
           onTimeout: () {
             throw TimeoutException(
-              '读取配置超过 ' + requestTimeout.inSeconds.toString() + ' 秒',
+              '读取配置超过 ${requestTimeout.inSeconds} 秒',
             );
           },
         );
@@ -188,7 +193,7 @@ class TvBoxConfigImportService {
     final remaining = deadline.difference(DateTime.now());
     if (remaining <= Duration.zero) {
       throw TimeoutException(
-        '配置读取超过 ' + requestTimeout.inSeconds.toString() + ' 秒',
+        '配置读取超过 ${requestTimeout.inSeconds} 秒',
       );
     }
     return remaining;

@@ -42,7 +42,7 @@ void main() {
     Duration timeout = const Duration(seconds: 2),
   }) {
     return TvBoxConfigImportService(
-      repository: repository,
+      _repository: repository,
       clientFactory: factory,
       requestTimeout: timeout,
     );
@@ -134,17 +134,18 @@ void main() {
   });
 
   test('imports a local JSON stream and enforces the same size limit', () async {
-    final importer = service(() => MockClient((request) async {
-          fail('A local import must not make a network request');
-          return http.Response('', 500);
-        }));
+    final importer = service(() => MockClient((request) =>
+        Future<http.Response>.error(
+          StateError('A local import must not make a network request'),
+        ),
+      ));
 
     final entry = await importer.importLocalStream(
       fileName: 'my-authorized-config.json',
       bytes: Stream<List<int>>.value(utf8.encode(validConfig)),
     );
     expect(entry.sourceUrl, isNull);
-    expect(entry.name, 'my-authorized-config.json');
+    expect(entry.name, '授权测试接口');
     expect(entry.siteCount, 1);
 
     await expectLater(
