@@ -116,7 +116,7 @@ class TvBoxConfigImportService {
           );
         });
 
-        if (response.isRedirect) {
+        if (response.statusCode >= 300 && response.statusCode < 400) {
           final location = response.headers['location'];
           await _cancelStream(response.stream);
           if (location == null || location.trim().isEmpty) {

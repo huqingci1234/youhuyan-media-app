@@ -54,7 +54,7 @@ void main() {
         expect(request.url.scheme, 'https');
         expect(request.followRedirects, isFalse);
         expect(request.headers['accept'], 'application/json');
-        return http.Response(validConfig, 200);
+        return http.Response.bytes(utf8.encode(validConfig), 200);
       }),
     );
 
