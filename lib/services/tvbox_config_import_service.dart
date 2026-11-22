@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../models/tvbox_config_entry.dart';
-import '../repositories/tvbox_config_repository.dart';
-import 'tvbox_config_validator.dart';
+import '../repositories/tvbox_configrepository.dart';
+import 'tvbox_configvalidator.dart';
 
 /// Imports user-owned or otherwise authorized TVBox JSON as inert data.
 ///
@@ -15,14 +15,14 @@ import 'tvbox_config_validator.dart';
 /// deadline. No imported spider, script, JAR, or plugin is ever executed.
 class TvBoxConfigImportService {
   TvBoxConfigImportService({
-    required this._repository,
-    this._validator = const TvBoxConfigValidator(),
+    required this.repository,
+    this.validator = const TvBoxConfigValidator(),
     http.Client Function()? clientFactory,
     this.requestTimeout = const Duration(seconds: 20),
   }) : _clientFactory = clientFactory ?? http.Client.new;
 
-  final TvBoxConfigRepository _repository;
-  final TvBoxConfigValidator _validator;
+  final TvBoxConfigRepository repository;
+  final TvBoxConfigValidator validator;
   final http.Client Function() _clientFactory;
   final Duration requestTimeout;
 
@@ -34,9 +34,9 @@ class TvBoxConfigImportService {
     String? name,
     bool makeDefault = false,
   }) async {
-    final normalizedUrl = _validator.normalizeHttpsUrl(url);
+    final normalizedUrl = validator.normalizeHttpsUrl(url);
     final rawJson = await _downloadJson(normalizedUrl);
-    return _repository.addConfig(
+    return repository.addConfig(
       rawJson: rawJson,
       sourceUrl: normalizedUrl,
       name: name,
@@ -45,7 +45,7 @@ class TvBoxConfigImportService {
   }
 
   Future<TvBoxConfigEntry> refreshRemote(int id) async {
-    final current = await _repository.getConfig(id);
+    final current = await repository.getConfig(id);
     final url = current.sourceUrl;
     if (url == null) {
       throw StateError('本地 JSON 文件没有远程地址，不能在线刷新');
@@ -55,13 +55,13 @@ class TvBoxConfigImportService {
     try {
       rawJson = await _downloadJson(url);
     } catch (error) {
-      await _repository.recordRefreshFailure(id, _errorMessage(error));
+      await repository.recordRefreshFailure(id, _errorMessage(error));
       rethrow;
     }
 
     // The repository validates again and performs the cache replacement in a
     // SQLite transaction. The last good cache remains available offline.
-    return _repository.refreshWithContent(id: id, rawJson: rawJson);
+    return repository.refreshWithContent(id: id, rawJson: rawJson);
   }
 
   Future<TvBoxConfigEntry> updateRemote({
@@ -69,15 +69,15 @@ class TvBoxConfigImportService {
     required String url,
     String? name,
   }) async {
-    final normalizedUrl = _validator.normalizeHttpsUrl(url);
+    final normalizedUrl = validator.normalizeHttpsUrl(url);
     final String rawJson;
     try {
       rawJson = await _downloadJson(normalizedUrl);
     } catch (error) {
-      await _repository.recordRefreshFailure(id, _errorMessage(error));
+      await repository.recordRefreshFailure(id, _errorMessage(error));
       rethrow;
     }
-    return _repository.updateConfig(
+    return repository.updateConfig(
       id: id,
       rawJson: rawJson,
       sourceUrl: normalizedUrl,
@@ -92,12 +92,12 @@ class TvBoxConfigImportService {
     final deadline = DateTime.now().add(requestTimeout);
     final content = await _readLimitedStream(bytes, deadline);
     final rawJson = utf8.decode(content, allowMalformed: false);
-    final document = _validator.validate(rawJson, fallbackName: fileName);
-    return _repository.addConfig(rawJson: rawJson, name: document.documentName);
+    final document = validator.validate(rawJson, fallbackName: fileName);
+    return repository.addConfig(rawJson: rawJson, name: document.documentName);
   }
 
   Future<String> _downloadJson(String input) async {
-    var current = Uri.parse(_validator.normalizeHttpsUrl(input));
+    var current = Uri.parse(validator.normalizeHttpsUrl(input));
     final deadline = DateTime.now().add(requestTimeout);
     final client = _clientFactory();
 
@@ -129,7 +129,7 @@ class TvBoxConfigImportService {
           // Revalidate the resolved target. HTTPS-to-HTTP downgrade redirects
           // are deliberately rejected.
           final target = current.resolve(location.trim());
-          current = Uri.parse(_validator.normalizeHttpsUrl(target.toString()));
+          current = Uri.parse(validator.normalizeHttpsUrl(target.toString()));
           redirects++;
           continue;
         }
@@ -147,7 +147,7 @@ class TvBoxConfigImportService {
 
         final content = await _readLimitedStream(response.stream, deadline);
         final rawJson = utf8.decode(content, allowMalformed: false);
-        _validator.validate(rawJson);
+        validator.validate(rawJson);
         return rawJson;
       }
     } finally {

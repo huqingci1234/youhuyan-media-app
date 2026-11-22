@@ -39,7 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
       setState(() {
         _repository = repository;
-        _importService = TvBoxConfigImportService(_repository: repository);
+        _importService = TvBoxConfigImportService(repository: repository);
         _configs = configs;
         _initializing = false;
       });

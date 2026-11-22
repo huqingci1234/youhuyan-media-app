@@ -42,7 +42,7 @@ void main() {
     Duration timeout = const Duration(seconds: 2),
   }) {
     return TvBoxConfigImportService(
-      _repository: repository,
+      repository: repository,
       clientFactory: factory,
       requestTimeout: timeout,
     );
