@@ -13,11 +13,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep platform plugins lazy: opening SQLite and the native file picker
+    // only happens after the user opens Settings, not during the home widget test.
     final pages = [
       _HomeContent(onOpenSettings: () => setState(() => _tab = 3)),
-      const _PlaceholderPage(title: '分类', subtitle: '电影 · 电视剧 · 综艺 · 动漫'),
-      const _PlaceholderPage(title: '收藏', subtitle: '收藏的内容将在这里显示'),
-      const SettingsScreen(),
+      _tab == 1
+          ? const _PlaceholderPage(title: '分类', subtitle: '电影 · 电视剧 · 综艺 · 动漫')
+          : const SizedBox.shrink(),
+      _tab == 2
+          ? const _PlaceholderPage(title: '收藏', subtitle: '收藏的内容将在这里显示')
+          : const SizedBox.shrink(),
+      _tab == 3 ? const SettingsScreen() : const SizedBox.shrink(),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -101,7 +107,7 @@ class _HomeContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          '当前为开发预览版，尚未接入影视内容服务和实际播放器。',
+          '当前为开发预览版，尚未接入完整影视数据源和实际播放器。',
           style: TextStyle(color: Colors.white54, fontSize: 12),
         ),
       ],
