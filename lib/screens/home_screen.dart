@@ -74,7 +74,7 @@ class _HomeContent extends StatelessWidget {
             children: [
               Text('WELCOME', style: TextStyle(letterSpacing: 2, color: Colors.white70)),
               SizedBox(height: 12),
-              Text('发现喜欢的\\n精彩内容', style: TextStyle(fontSize: 27, height: 1.25, fontWeight: FontWeight.bold)),
+              Text('发现喜欢的\n精彩内容', style: TextStyle(fontSize: 27, height: 1.25, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               Text('尤湖沿影视 · 让观影更简单', style: TextStyle(color: Colors.white70)),
             ],
