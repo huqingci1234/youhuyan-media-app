@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'catalog_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,12 +15,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // Keep platform plugins lazy: opening SQLite and the native file picker
-    // only happens after the user opens Settings, not during the home widget test.
+    // only happens after the user opens a data or settings page.
     final pages = [
       _HomeContent(onOpenSettings: () => setState(() => _tab = 3)),
-      _tab == 1
-          ? const _PlaceholderPage(title: '分类', subtitle: '电影 · 电视剧 · 综艺 · 动漫')
-          : const SizedBox.shrink(),
+      _tab == 1 ? const CatalogScreen() : const SizedBox.shrink(),
       _tab == 2
           ? const _PlaceholderPage(title: '收藏', subtitle: '收藏的内容将在这里显示')
           : const SizedBox.shrink(),
@@ -42,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onDestinationSelected: (value) => setState(() => _tab = value),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: '首页'),
-          NavigationDestination(icon: Icon(Icons.grid_view_outlined), label: '分类'),
+          NavigationDestination(icon: Icon(Icons.grid_view_outlined), selectedIcon: Icon(Icons.grid_view), label: '资源'),
           NavigationDestination(icon: Icon(Icons.bookmark_border), selectedIcon: Icon(Icons.bookmark), label: '收藏'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: '我的'),
         ],
@@ -75,7 +74,7 @@ class _HomeContent extends StatelessWidget {
             children: [
               Text('WELCOME', style: TextStyle(letterSpacing: 2, color: Colors.white70)),
               SizedBox(height: 12),
-              Text('发现喜欢的\n精彩内容', style: TextStyle(fontSize: 27, height: 1.25, fontWeight: FontWeight.bold)),
+              Text('发现喜欢的\\n精彩内容', style: TextStyle(fontSize: 27, height: 1.25, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               Text('尤湖沿影视 · 让观影更简单', style: TextStyle(color: Colors.white70)),
             ],
@@ -107,7 +106,7 @@ class _HomeContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          '当前为开发预览版，尚未接入完整影视数据源和实际播放器。',
+          '当前为开发预览版；资源目录读取已接入，影视详情、站点检索 API 和实际播放器仍在开发中。',
           style: TextStyle(color: Colors.white54, fontSize: 12),
         ),
       ],
