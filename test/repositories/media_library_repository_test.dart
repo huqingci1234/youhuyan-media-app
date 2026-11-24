@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:youhuyan_media/models/media_library_entry.dart';
 import 'package:youhuyan_media/repositories/tvbox_config_repository.dart';
 
 const _configA = '''
