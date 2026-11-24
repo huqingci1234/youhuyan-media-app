@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../models/media_library_entry.dart';
 import '../models/tvbox_config_entry.dart';
 import '../services/tvbox_config_validator.dart';
 
@@ -443,6 +445,223 @@ class TvBoxConfigRepository {
         }
       }
     });
+  }
+
+
+  /// Saves a favorite independently from all config sources.
+  ///
+  /// Use a stable, namespaced key such as "siteKey:itemId" so two sites with
+  /// overlapping IDs do not overwrite one another.
+  Future<FavoriteEntry> saveFavorite({
+    required String mediaKey,
+    required String title,
+    required String itemJson,
+  }) async {
+    final key = _validateMediaKey(mediaKey);
+    final safeTitle = _validateMediaTitle(title);
+    _validateMediaJson(itemJson);
+
+    final database = await _database;
+    final now = _nowIso();
+    await database.transaction((transaction) async {
+      final existing = await transaction.query(
+        'favorites',
+        columns: ['media_key'],
+        where: 'media_key = ?',
+        whereArgs: [key],
+        limit: 1,
+      );
+      if (existing.isEmpty) {
+        await transaction.insert('favorites', {
+          'media_key': key,
+          'title': safeTitle,
+          'item_json': itemJson,
+          'created_at': now,
+        });
+      } else {
+        // Keep the original created_at when refreshing a saved favorite.
+        await transaction.update(
+          'favorites',
+          {'title': safeTitle, 'item_json': itemJson},
+          where: 'media_key = ?',
+          whereArgs: [key],
+        );
+      }
+    });
+
+    final saved = await getFavorite(key);
+    if (saved == null) throw StateError('收藏保存后无法读取');
+    return saved;
+  }
+
+  Future<FavoriteEntry?> getFavorite(String mediaKey) async {
+    final key = _validateMediaKey(mediaKey);
+    final database = await _database;
+    final rows = await database.query(
+      'favorites',
+      where: 'media_key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : FavoriteEntry.fromDatabaseRow(rows.single);
+  }
+
+  Future<bool> isFavorite(String mediaKey) async =>
+      (await getFavorite(mediaKey)) != null;
+
+  Future<List<FavoriteEntry>> listFavorites() async {
+    final database = await _database;
+    final rows = await database.query(
+      'favorites',
+      orderBy: 'created_at DESC, media_key COLLATE NOCASE ASC',
+    );
+    return rows
+        .map(FavoriteEntry.fromDatabaseRow)
+        .toList(growable: false);
+  }
+
+  Future<void> removeFavorite(String mediaKey) async {
+    final key = _validateMediaKey(mediaKey);
+    final database = await _database;
+    await database.delete(
+      'favorites',
+      where: 'media_key = ?',
+      whereArgs: [key],
+    );
+  }
+
+  /// Stores the latest playback position without tying the item to a config ID.
+  /// If a known duration is exceeded, position is clamped to that duration.
+  Future<WatchHistoryEntry> saveWatchProgress({
+    required String mediaKey,
+    required String title,
+    required String itemJson,
+    required int positionMs,
+    required int? durationMs,
+  }) async {
+    final key = _validateMediaKey(mediaKey);
+    final safeTitle = _validateMediaTitle(title);
+    _validateMediaJson(itemJson);
+    if (positionMs < 0) {
+      throw ArgumentError.value(positionMs, 'positionMs', '播放进度不能小于 0');
+    }
+    if (durationMs != null && durationMs < 0) {
+      throw ArgumentError.value(durationMs, 'durationMs', '视频时长不能小于 0');
+    }
+
+    final safePosition = durationMs != null &&
+            durationMs > 0 &&
+            positionMs > durationMs
+        ? durationMs
+        : positionMs;
+    final database = await _database;
+    final now = _nowIso();
+
+    await database.transaction((transaction) async {
+      final existing = await transaction.query(
+        'watch_history',
+        columns: ['media_key'],
+        where: 'media_key = ?',
+        whereArgs: [key],
+        limit: 1,
+      );
+      final values = {
+        'title': safeTitle,
+        'item_json': itemJson,
+        'position_ms': safePosition,
+        'duration_ms': durationMs,
+        'updated_at': now,
+      };
+      if (existing.isEmpty) {
+        await transaction.insert('watch_history', {
+          'media_key': key,
+          ...values,
+        });
+      } else {
+        await transaction.update(
+          'watch_history',
+          values,
+          where: 'media_key = ?',
+          whereArgs: [key],
+        );
+      }
+    });
+
+    final saved = await getWatchHistoryEntry(key);
+    if (saved == null) throw StateError('播放记录保存后无法读取');
+    return saved;
+  }
+
+  Future<WatchHistoryEntry?> getWatchHistoryEntry(String mediaKey) async {
+    final key = _validateMediaKey(mediaKey);
+    final database = await _database;
+    final rows = await database.query(
+      'watch_history',
+      where: 'media_key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    return rows.isEmpty
+        ? null
+        : WatchHistoryEntry.fromDatabaseRow(rows.single);
+  }
+
+  Future<List<WatchHistoryEntry>> listWatchHistory({int limit = 100}) async {
+    if (limit < 1 || limit > 1000) {
+      throw ArgumentError.value(limit, 'limit', '历史记录条数必须在 1 到 1000 之间');
+    }
+    final database = await _database;
+    final rows = await database.query(
+      'watch_history',
+      orderBy: 'updated_at DESC, media_key COLLATE NOCASE ASC',
+      limit: limit,
+    );
+    return rows
+        .map(WatchHistoryEntry.fromDatabaseRow)
+        .toList(growable: false);
+  }
+
+  Future<void> removeWatchHistory(String mediaKey) async {
+    final key = _validateMediaKey(mediaKey);
+    final database = await _database;
+    await database.delete(
+      'watch_history',
+      where: 'media_key = ?',
+      whereArgs: [key],
+    );
+  }
+
+  Future<void> clearWatchHistory() async {
+    final database = await _database;
+    await database.delete('watch_history');
+  }
+
+  String _validateMediaKey(String mediaKey) {
+    final value = mediaKey.trim();
+    if (value.isEmpty || value.length > 512) {
+      throw ArgumentError.value(mediaKey, 'mediaKey', '媒体标识不能为空且不能超过 512 个字符');
+    }
+    return value;
+  }
+
+  String _validateMediaTitle(String title) {
+    final value = title.trim();
+    if (value.isEmpty || value.length > 512) {
+      throw ArgumentError.value(title, 'title', '媒体标题不能为空且不能超过 512 个字符');
+    }
+    return value;
+  }
+
+  void _validateMediaJson(String itemJson) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(itemJson);
+    } on FormatException {
+      throw const FormatException('媒体快照不是有效 JSON');
+    }
+    if (decoded is! Map) {
+      throw const FormatException('媒体快照必须是 JSON 对象');
+    }
   }
 
   Future<void> close() async {
