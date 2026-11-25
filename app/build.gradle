@@ -18,7 +18,7 @@ android {
     compileSdk libs.versions.compileSdk.get().toInteger()
 
     defaultConfig {
-        applicationId "com.cyj265.lanxingvod"
+        applicationId "com.youhuyan.media"
         minSdk libs.versions.minSdk.get().toInteger()
         targetSdk libs.versions.targetSdk.get().toInteger()
         versionCode 684
@@ -130,7 +130,7 @@ androidComponents {
         def abi = flavors['abi'] ?: 'abi'
         variant.outputs.each { output ->
             def buildNumber = System.getenv("RUN_NUMBER") ?: "0"
-            output.outputFileName.set("揽星影视-${mode}-${abi}-${buildNumber}.apk")
+            output.outputFileName.set("Youhuyan-${mode}-${abi}-${buildNumber}.apk")
         }
     }
 }
