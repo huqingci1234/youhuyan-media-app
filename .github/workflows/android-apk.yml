@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# Keep phone and TV release builds serialized; never cancel a build already in progress.
+concurrency:
+  group: youhuyan-apk-release
+  cancel-in-progress: false
+
 jobs:
   phone:
     name: Phone APK - Lanxing mobile base
