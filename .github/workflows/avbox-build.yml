@@ -1,0 +1,92 @@
+name: AVBox build and signing check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [avbox-final]
+    paths:
+      - ".github/workflows/avbox-build.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: avbox-final-build
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Build AVBox APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout app project
+        uses: actions/checkout@v4
+        with:
+          repository: XiaochangXu/AVBox
+          ref: main
+          path: app-source
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Prepare release signing key (only when all secrets exist)
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: app-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$KEYSTORE_B64" && -n "$STORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
+            mkdir -p .key
+            printf '%s' "$KEYSTORE_B64" | base64 --decode > .key/app-release.jks
+            test -s .key/app-release.jks
+            echo "release_signing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_signing=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Signing secrets are not all configured. Building a debug APK only; no production-signed APK will be published."
+          fi
+
+      - name: Build signed release APK
+        if: steps.signing.outputs.release_signing == 'true'
+        working-directory: app-source
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon --stacktrace :app:assembleRelease \
+            -PRELEASE_STORE_FILE=.key/app-release.jks \
+            -PRELEASE_STORE_PASSWORD="$STORE_PASSWORD" \
+            -PRELEASE_KEY_ALIAS="$KEY_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$KEY_PASSWORD"
+
+      - name: Build debug APK (temporary validation only)
+        if: steps.signing.outputs.release_signing != 'true'
+        working-directory: app-source
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Upload APK and signing status
+        uses: actions/upload-artifact@v4
+        with:
+          name: avbox-apk-${{ steps.signing.outputs.release_signing == 'true' && 'release-signed' || 'debug-unsigned' }}
+          path: app-source/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove temporary signing key
+        if: always()
+        working-directory: app-source
+        run: rm -f .key/app-release.jks
