@@ -37,19 +37,20 @@ source = source.replace(
 gradle.write_text(source, encoding="utf-8")
 
 # Apply the app's public-facing name without changing the upstream icon artwork.
-strings = Path("app/src/main/res/values/strings.xml")
-if not strings.is_file():
-    raise SystemExit("AVBox strings.xml not found")
-strings_source = strings.read_text(encoding="utf-8")
-strings_source, replacements = re.subn(
-    r'(<string name="app_name">).*?(</string>)',
-    r'\1尤湖沿影视\2',
-    strings_source,
-    count=1,
-)
-if replacements != 1:
-    raise SystemExit("Could not safely replace app_name")
-strings.write_text(strings_source, encoding="utf-8")
+string_files = list(Path("app/src/main/res").glob("values*/strings.xml"))
+base_strings = Path("app/src/main/res/values/strings.xml")
+if base_strings not in string_files:
+    raise SystemExit("AVBox base strings.xml not found")
+for strings in string_files:
+    strings_source = strings.read_text(encoding="utf-8")
+    strings_source, replacements = re.subn(
+        r'(<string name="app_name">).*?(</string>)',
+        r'\1尤湖沿影视\2',
+        strings_source,
+        count=1,
+    )
+    if replacements:
+        strings.write_text(strings_source, encoding="utf-8")
 
 # Android TV launchers expect a wide banner asset (320x180dp).
 banner = Path("app/src/main/res/drawable/tv_banner.xml")
