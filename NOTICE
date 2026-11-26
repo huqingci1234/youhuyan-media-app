@@ -1,0 +1,10 @@
+This project contains or is intended to contain modifications and derivative
+work based on AVBox.
+
+Upstream project: https://github.com/XiaochangXu/AVBox
+Upstream license: GNU Affero General Public License, version 3 (AGPL-3.0)
+The full license text is provided in the LICENSE file.
+
+Upstream source files retain their applicable copyright and license notices.
+This project must publish corresponding source code and preserve applicable
+license obligations when distributing modified binaries.
