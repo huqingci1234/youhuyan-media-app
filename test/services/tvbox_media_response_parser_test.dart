@@ -91,9 +91,9 @@ void main() {
     }
     ''');
 
-    expect(page.items, hasLength(3));
+    expect(page.items, hasLength(2));
     expect(page.items[0].id, '缺少 ID 但可用名称作为标识');
-    expect(page.items[2].id, 'ok');
+    expect(page.items[1].id, 'ok');
   });
 
   test('parses detail metadata and inert multi-source episode labels', () {
