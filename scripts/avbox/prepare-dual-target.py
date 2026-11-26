@@ -74,6 +74,9 @@ tv_manifest = Path("app/src/tv/AndroidManifest.xml")
 tv_manifest.parent.mkdir(parents=True, exist_ok=True)
 tv_manifest.write_text("""<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
     <application>
         <activity
             android:name=".ui.MainActivity"
