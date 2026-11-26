@@ -1,4 +1,4 @@
-name: AVBox build and signing check
+name: AVBox dual-target build
 
 on:
   workflow_dispatch:
@@ -6,6 +6,8 @@ on:
     branches: [avbox-final]
     paths:
       - ".github/workflows/avbox-build.yml"
+      - "scripts/avbox/**"
+      - "docs/AVBOX_DUAL_TARGET_PLAN.md"
 
 permissions:
   contents: read
@@ -16,29 +18,42 @@ concurrency:
 
 jobs:
   android:
-    name: Build AVBox APK
+    name: Build mobile and TV APKs
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - name: Checkout app project
+      - name: Checkout AVBox source
         uses: actions/checkout@v4
         with:
           repository: XiaochangXu/AVBox
           ref: main
           path: app-source
 
+      - name: Checkout maintained overlay
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref_name }}
+          path: overlay
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
+          cache: gradle
+          cache-dependency-path: app-source/**/*.gradle*
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
 
-      - name: Prepare release signing key (only when all secrets exist)
+      - name: Apply mobile and TV build targets
+        working-directory: app-source
+        run: python3 ../overlay/scripts/avbox/prepare-dual-target.py
+
+      - name: Prepare release signing key
         id: signing
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -56,10 +71,10 @@ jobs:
             echo "release_signing=true" >> "$GITHUB_OUTPUT"
           else
             echo "release_signing=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Signing secrets are not all configured. Building a debug APK only; no production-signed APK will be published."
+            echo "::warning::Signing secrets are not configured. Building validation APKs only."
           fi
 
-      - name: Build signed release APK
+      - name: Build both signed release APKs
         if: steps.signing.outputs.release_signing == 'true'
         working-directory: app-source
         env:
@@ -67,21 +82,35 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          ./gradlew --no-daemon --stacktrace :app:assembleRelease \
+          ./gradlew --no-daemon --stacktrace :app:assembleMobileRelease :app:assembleTvRelease \
             -PRELEASE_STORE_FILE=.key/app-release.jks \
             -PRELEASE_STORE_PASSWORD="$STORE_PASSWORD" \
             -PRELEASE_KEY_ALIAS="$KEY_ALIAS" \
             -PRELEASE_KEY_PASSWORD="$KEY_PASSWORD"
 
-      - name: Build debug APK (temporary validation only)
+      - name: Build both debug APKs and unit tests
         if: steps.signing.outputs.release_signing != 'true'
         working-directory: app-source
-        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
+        run: |
+          ./gradlew --no-daemon --stacktrace \
+            :app:assembleMobileDebug :app:assembleTvDebug \
+            :app:testMobileDebugUnitTest :app:testTvDebugUnitTest
 
-      - name: Upload APK and signing status
+      - name: Verify APK package IDs
+        working-directory: app-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          for apk in app/build/outputs/apk/mobile/*/*.apk app/build/outputs/apk/tv/*/*.apk; do
+            [[ -f "$apk" ]] || continue
+            echo "Built: $apk"
+          done
+          test -n "$(find app/build/outputs/apk -name '*.apk' -print -quit)"
+
+      - name: Upload mobile and TV APKs
         uses: actions/upload-artifact@v4
         with:
-          name: avbox-apk-${{ steps.signing.outputs.release_signing == 'true' && 'release-signed' || 'debug-unsigned' }}
+          name: youhuyan-avbox-${{ steps.signing.outputs.release_signing == 'true' && 'release-signed' || 'debug-validation' }}
           path: app-source/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 14
