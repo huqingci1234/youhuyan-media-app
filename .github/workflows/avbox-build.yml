@@ -101,16 +101,21 @@ jobs:
             :app:assembleMobileDebug :app:assembleTvDebug \
             :app:testMobileDebugUnitTest :app:testTvDebugUnitTest
 
-      - name: Verify APK package IDs
+      - name: Verify mobile and TV package IDs
         working-directory: app-source
         shell: bash
         run: |
           set -euo pipefail
-          for apk in app/build/outputs/apk/mobile/*/*.apk app/build/outputs/apk/tv/*/*.apk; do
-            [[ -f "$apk" ]] || continue
-            echo "Built: $apk"
-          done
-          test -n "$(find app/build/outputs/apk -name '*.apk' -print -quit)"
+          mobile_apk="$(find app/build/outputs/apk/mobile -name '*.apk' -type f | head -n 1)"
+          tv_apk="$(find app/build/outputs/apk/tv -name '*.apk' -type f | head -n 1)"
+          test -n "$mobile_apk"
+          test -n "$tv_apk"
+          aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$aapt"
+          "$aapt" dump badging "$mobile_apk" | grep -F "package: name='com.youhuyan.media'"
+          "$aapt" dump badging "$tv_apk" | grep -F "package: name='com.youhuyan.media.tv'"
+          echo "Mobile APK: $mobile_apk"
+          echo "TV APK: $tv_apk"
 
       - name: Upload mobile and TV APKs
         uses: actions/upload-artifact@v4
