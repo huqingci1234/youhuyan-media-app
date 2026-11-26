@@ -44,7 +44,7 @@ card_source = card.read_text(encoding="utf-8")
 if "collectIsFocusedAsState" not in card_source:
     card_source = card_source.replace(
         "import androidx.compose.foundation.interaction.collectIsPressedAsState",
-        "import androidx.compose.foundation.interaction.collectIsPressedAsState\\nimport androidx.compose.foundation.interaction.collectIsFocusedAsState"
+        "import androidx.compose.foundation.interaction.collectIsPressedAsState\nimport androidx.compose.foundation.interaction.collectIsFocusedAsState"
     )
     card_source = card_source.replace(
         "import androidx.compose.foundation.background",
@@ -53,20 +53,20 @@ if "collectIsFocusedAsState" not in card_source:
     if "import androidx.compose.foundation.border" not in card_source:
         card_source = card_source.replace(
             "import androidx.compose.foundation.interaction.MutableInteractionSource",
-            "import androidx.compose.foundation.border\\nimport androidx.compose.foundation.interaction.MutableInteractionSource"
+            "import androidx.compose.foundation.border\nimport androidx.compose.foundation.interaction.MutableInteractionSource"
         )
     if "import androidx.compose.material3.MaterialTheme" not in card_source:
         card_source = card_source.replace(
             "import androidx.compose.foundation.shape.RoundedCornerShape",
-            "import androidx.compose.foundation.shape.RoundedCornerShape\\nimport androidx.compose.material3.MaterialTheme"
+            "import androidx.compose.foundation.shape.RoundedCornerShape\nimport androidx.compose.material3.MaterialTheme"
         )
     card_source = card_source.replace(
         "val pressed by interactionSource.collectIsPressedAsState()",
-        "val pressed by interactionSource.collectIsPressedAsState()\\n    val focused by interactionSource.collectIsFocusedAsState()"
+        "val pressed by interactionSource.collectIsPressedAsState()\n    val focused by interactionSource.collectIsFocusedAsState()"
     )
     card_source = card_source.replace(
-        ".clip(shape)\\n            .combinedClickable(",
-        ".clip(shape)\\n            .border(width = if (focused) 3.dp else 0.dp, color = MaterialTheme.colorScheme.primary, shape = shape)\\n            .combinedClickable("
+        ".clip(shape)\n            .combinedClickable(",
+        ".clip(shape)\n            .border(width = if (focused) 3.dp else 0.dp, color = MaterialTheme.colorScheme.primary, shape = shape)\n            .combinedClickable("
     )
     card.write_text(card_source, encoding="utf-8")
 
