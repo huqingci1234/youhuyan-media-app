@@ -36,11 +36,43 @@ source = source.replace(
 )
 gradle.write_text(source, encoding="utf-8")
 
+# Give DPAD focus a visible ring on cards; Compose clickable handles focus navigation.
+card = Path("app/src/main/java/com/github/avbox/osc/ui/components/PressableCard.kt")
+if not card.is_file():
+    raise SystemExit("PressableCard.kt not found; refusing to skip TV focus affordance")
+card_source = card.read_text(encoding="utf-8")
+if "collectIsFocusedAsState" not in card_source:
+    card_source = card_source.replace(
+        "import androidx.compose.foundation.interaction.collectIsPressedAsState",
+        "import androidx.compose.foundation.interaction.collectIsPressedAsState\\nimport androidx.compose.foundation.interaction.collectIsFocusedAsState"
+    )
+    card_source = card_source.replace(
+        "import androidx.compose.foundation.background",
+        "import androidx.compose.foundation.background"
+    )
+    if "import androidx.compose.foundation.border" not in card_source:
+        card_source = card_source.replace(
+            "import androidx.compose.foundation.interaction.MutableInteractionSource",
+            "import androidx.compose.foundation.border\\nimport androidx.compose.foundation.interaction.MutableInteractionSource"
+        )
+    card_source = card_source.replace(
+        "val pressed by interactionSource.collectIsPressedAsState()",
+        "val pressed by interactionSource.collectIsPressedAsState()\\n    val focused by interactionSource.collectIsFocusedAsState()"
+    )
+    card_source = card_source.replace(
+        ".clip(shape)\\n            .combinedClickable(",
+        ".clip(shape)\\n            .border(width = if (focused) 3.dp else 0.dp, color = MaterialTheme.colorScheme.primary, shape = shape)\\n            .combinedClickable("
+    )
+    card.write_text(card_source, encoding="utf-8")
+
 tv_manifest = Path("app/src/tv/AndroidManifest.xml")
 tv_manifest.parent.mkdir(parents=True, exist_ok=True)
 tv_manifest.write_text("""<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <activity
+            android:name=".ui.MainActivity"
+            android:screenOrientation="landscape" />
         <activity-alias
             android:name=".TvLauncherActivity"
             android:targetActivity=".ui.MainActivity"
