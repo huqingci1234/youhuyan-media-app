@@ -22,12 +22,17 @@
 
 ### 阶段 A：双端构建骨架
 
-1. 建立明确的 mobile / tv 构建变体或独立 application module。
-2. 固定两个 applicationId 和各自的 launcher manifest。
-3. 统一版本号来源与 APK 文件命名。
-4. Debug 构建先验证依赖、Manifest 合并、资源和包名；不擅自运行 Release 构建。
+已提交第一版 overlay：
+1. 在上游单一 app module 中增加 `mobile` / `tv` product flavors。
+2. 固定两个 applicationId：`com.youhuyan.media`、`com.youhuyan.media.tv`。
+3. TV flavor 增加 Leanback launcher alias、Leanback 设备特征和横屏入口。
+4. APK 文件名包含完整 variant 名称。
+5. 给 Compose 卡片增加遥控器焦点描边，便于 DPAD 导航时识别当前焦点。
+6. Actions checkout 上游源码与本仓库 overlay，自动应用补丁；设置 JDK 21 与 Python 3.10（Chaquopy 构建依赖）。
 
-验收：Actions 能分别生成两个 Debug APK，安装包 applicationId 与目标一致。
+首次 CI 已验证源码 checkout、overlay 应用、Android SDK 初始化及 Gradle 变体配置阶段成功；随后在 Chaquopy 的 Python 依赖任务失败，原因是 runner 未预装 Python 3.10。已在 workflow 加入 Python 3.10 环境，等待下一轮 CI 验证。
+
+验收仍需：两个 Debug APK 成功产出，并核对 APK 内 applicationId 与 TV Leanback manifest。
 
 ### 阶段 B：手机端品牌与回归
 
@@ -40,13 +45,15 @@
 
 ### 阶段 C：TV 独立适配
 
-1. 增加 TV 专用入口与 Leanback launcher 声明。
-2. 提供适合 16:9 大屏的首页、分类、详情和播放控制布局。
-3. 为所有可交互控件实现清晰的 DPAD 焦点顺序、焦点态和返回行为。
-4. 验证遥控器方向键、确认、返回、菜单键；不依赖触摸操作。
-5. 处理电视设备能力、无触屏声明、横屏与安全区域。
+已建立 TV flavor 的 Leanback 入口、电视设备特征、横屏设置，并给卡片增加可见焦点态。上游首页在宽屏下使用 NavigationRail 和自适应网格；Compose clickable 控件提供基础键盘/遥控器焦点行为。
 
-验收：在 Android TV / Google TV 设备或模拟器上，仅用遥控器完成启动、浏览、搜索、播放、暂停、选集和退出。
+仍需继续：
+1. 检查首页、分类、详情和播放器是否都能形成合理 DPAD 焦点链。
+2. 针对电视屏幕调整字号、卡片间距、焦点缩放/描边与滚动定位。
+3. 验证方向键、确认、返回、菜单键；修正需要触摸或手势的交互。
+4. 在 Android TV / Google TV 模拟器或真机上完成全流程验收。
+
+验收：仅用遥控器完成启动、浏览、搜索、播放、暂停、选集和退出。当前尚未完成此项验收，不能将 TV 版称为最终成品。
 
 ### 阶段 D：正式签名与发布
 
