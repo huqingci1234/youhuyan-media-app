@@ -11,7 +11,7 @@
 
 ## 已核实的上游事实
 
-- 上游：`XiaochangXu/AVBox`，分支 `main`。
+- 上游：`XiaochangXu/AVBox`，固定基线提交 `a6da734ed2b14e9eb290e90bd5d7bddf29f23c58`（2026-11-17），CI 不再跟随可变分支。
 - Android 工程包含 `:app`、`:quickjs`、`:pyramid`、`:libs:backdrop`。
 - 当前只有一个 Android application 模块；默认 namespace 和 applicationId 为 `com.github.avbox.osc`。
 - 当前主启动 Activity 是 `.ui.MainActivity`，Manifest 使用普通 `LAUNCHER`，没有独立 Leanback launcher 入口。
