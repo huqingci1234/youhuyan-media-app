@@ -55,6 +55,11 @@ if "collectIsFocusedAsState" not in card_source:
             "import androidx.compose.foundation.interaction.MutableInteractionSource",
             "import androidx.compose.foundation.border\\nimport androidx.compose.foundation.interaction.MutableInteractionSource"
         )
+    if "import androidx.compose.material3.MaterialTheme" not in card_source:
+        card_source = card_source.replace(
+            "import androidx.compose.foundation.shape.RoundedCornerShape",
+            "import androidx.compose.foundation.shape.RoundedCornerShape\\nimport androidx.compose.material3.MaterialTheme"
+        )
     card_source = card_source.replace(
         "val pressed by interactionSource.collectIsPressedAsState()",
         "val pressed by interactionSource.collectIsPressedAsState()\\n    val focused by interactionSource.collectIsFocusedAsState()"
