@@ -43,7 +43,7 @@ if not strings.is_file():
 strings_source = strings.read_text(encoding="utf-8")
 strings_source, replacements = re.subn(
     r'(<string name="app_name">).*?(</string>)',
-    r'\\1尤湖沿影视\\2',
+    r'\1尤湖沿影视\2',
     strings_source,
     count=1,
 )
