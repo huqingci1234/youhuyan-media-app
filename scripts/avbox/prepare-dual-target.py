@@ -36,6 +36,38 @@ source = source.replace(
 )
 gradle.write_text(source, encoding="utf-8")
 
+# Apply the app's public-facing name without changing the upstream icon artwork.
+strings = Path("app/src/main/res/values/strings.xml")
+if not strings.is_file():
+    raise SystemExit("AVBox strings.xml not found")
+strings_source = strings.read_text(encoding="utf-8")
+strings_source, replacements = re.subn(
+    r'(<string name="app_name">).*?(</string>)',
+    r'\\1尤湖沿影视\\2',
+    strings_source,
+    count=1,
+)
+if replacements != 1:
+    raise SystemExit("Could not safely replace app_name")
+strings.write_text(strings_source, encoding="utf-8")
+
+# Android TV launchers expect a wide banner asset (320x180dp).
+banner = Path("app/src/main/res/drawable/tv_banner.xml")
+banner.parent.mkdir(parents=True, exist_ok=True)
+banner.write_text("""<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:fillColor="#14243A" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#234C70" android:pathData="M0,132h320v48h-320z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M136,48h48a12,12 0,0 1,12 12v60a12,12 0,0 1,-12 12h-48a12,12 0,0 1,-12 -12v-60a12,12 0,0 1,12 -12z" />
+    <path android:fillColor="#14243A" android:pathData="M150,66l32,24 -32,24z" />
+</vector>
+""", encoding="utf-8")
+
+
 # Give DPAD focus a visible ring on cards; Compose clickable handles focus navigation.
 card = Path("app/src/main/java/com/github/avbox/osc/ui/components/PressableCard.kt")
 if not card.is_file():
@@ -86,7 +118,7 @@ tv_manifest.write_text("""<?xml version="1.0" encoding="utf-8"?>
             android:targetActivity=".ui.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:banner="@mipmap/ic_launcher">
+            android:banner="@drawable/tv_banner">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
