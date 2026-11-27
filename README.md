@@ -1,6 +1,6 @@
 # 尤湖沿影视｜独立 Flutter 工程
 
-本分支 `flutter-independent` 专门推进独立 Flutter 客户端，不覆盖 `main` 分支现有的 Android 构建流程，也不修改 `resource-hub` 生产配置。
+本分支 flutter-independent 专门推进独立 Flutter 客户端，不覆盖 main 分支现有的 Android 构建流程，也不修改 resource-hub 生产配置。
 
 ## 当前可验证里程碑
 
@@ -11,9 +11,10 @@
 - 远程导入：仅允许 HTTPS，最多跟随 3 次 HTTPS 重定向；20 秒总超时；状态码检查；2 MiB 响应流限制；严格 UTF-8 与 JSON 结构验证。
 - 本地导入：通过系统文件选择器导入 JSON，流式读取并执行同样的 2 MiB 限制及 JSON 校验。
 - 设置界面：多接口列表、添加、重命名、删除、唯一默认切换、刷新、修改 URL 后重新下载验证，以及上次成功/错误状态。
-- 资源目录 V1：从当前默认配置的离线 JSON 缓存读取站点和直播分组；支持按站点名称/标识、直播分组/频道名称本地搜索；远程 API 和播放列表地址仅作为数据保存，不执行远程脚本或自动下载。
-- 媒体数据解析 V1：新增通用影视条目、分页、详情、播放源和集数数据模型；解析常见 TVBox/MacCMS JSON 的 `list`、`data`、`data.list` 结构及 `vod_*` 字段；播放地址只拆分为惰性字符串，不发起请求、不交给播放器。
-- 收藏/观看历史 Repository V1：收藏增删查、播放进度 upsert、历史读取/清理；按 `siteKey:itemId` 命名空间保存，不依赖接口配置 ID。
+- 资源目录 V1：从当前默认配置的离线 JSON 缓存读取站点和直播分组；支持按站点名称/标识、直播分组/频道名称本地搜索；远程 API 和播放列表地址仅作为数据保存，不执行远程脚本或自动请求。
+- 媒体数据解析 V1：新增通用影视条目、分页、详情、播放源和集数数据模型；解析常见 TVBox/MacCMS JSON 的 list、data、data.list 结构及 vod_* 字段；播放地址只拆分为惰性字符串，不发起请求、不交给播放器。
+- 站点 API 网络层 V1：新增显式调用的 HTTPS GET 客户端，保留原有查询参数并支持附加分页/搜索参数；手动处理最多 3 次 HTTPS 重定向并拒绝降级；统一总超时、HTTP 200 状态校验、响应大小限制和严格 UTF-8；最后交由影视列表/详情解析器验证 JSON 结构。此服务当前尚未接入资源目录 UI。
+- 收藏/观看历史 Repository V1：收藏增删查、播放进度 upsert、历史读取/清理；按 siteKey:itemId 命名空间保存，不依赖接口配置 ID。
 - 收藏与历史界面 V1：独立导航入口、空状态、收藏取消、单条历史删除、清空历史、播放进度和最近更新时间展示；数据来自 SQLite。
 - 安全边界：导入内容只作为 JSON 数据保存，不执行 spider、脚本、JAR 或未知二进制插件。
 
@@ -26,7 +27,7 @@
 
 ## 当前尚未完成
 
-站点 API 的 HTTPS 请求层、分类/内容列表与详情页面接入、播放器、真实播放进度自动写入及继续播放、会员服务端和管理员后台仍待开发。Android TV 遥控器/文件选择、Windows/macOS/iOS 真机或桌面测试尚未完成。当前 CI 目标是 Android Debug 预览构建，不是签名发布包。鸿蒙手机仅单独评估 Flutter for OpenHarmony，不阻塞主线；Apple TV/tvOS 不开发。
+分类/影视列表和详情页面仍未接入真实站点 API；播放器、真实播放进度自动写入及继续观看仍待开发。Android TV 遥控器焦点/文件选择及 Android TV 实机测试尚未完成。Windows/macOS/iOS/iPadOS 平台构建与设备测试仍待执行。会员服务端、哈希兑换码、原子核销、管理员后台和三设备校验尚未实现。
 
 ## 会员规则（已确认，尚未实现）
 
@@ -41,4 +42,4 @@
 
 ## 本分支验证
 
-推送 `flutter-independent` 分支会运行 .github/workflows/flutter-independent-ci.yml。成功后上传 14 天有效的 Android Debug APK 构建产物。Debug APK 不能当作正式签名发布包。
+推送 flutter-independent 分支会运行 .github/workflows/flutter-independent-ci.yml。CI 成功后上传 14 天有效的 Android Debug APK 构建产物。Debug APK 不能当作正式签名发布包。
