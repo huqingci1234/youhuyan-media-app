@@ -16,12 +16,11 @@ import 'tvbox_media_response_parser.dart';
 class TvBoxSiteApiClient {
   TvBoxSiteApiClient({
     http.Client Function()? clientFactory,
-    TvBoxMediaResponseParser parser = const TvBoxMediaResponseParser(),
     this.requestTimeout = const Duration(seconds: 20),
     this.maxRedirects = 3,
     this.maxResponseBytes = 2 * 1024 * 1024,
   })  : _clientFactory = clientFactory ?? (() => http.Client()),
-        _parser = parser {
+        _parser = const TvBoxMediaResponseParser() {
     if (requestTimeout <= Duration.zero) {
       throw ArgumentError.value(requestTimeout, 'requestTimeout');
     }
@@ -88,9 +87,7 @@ class TvBoxSiteApiClient {
         final response = await client.send(request).timeout(
           _remaining(deadline),
           onTimeout: () => throw TimeoutException(
-            '影视站点 API 请求超过 ' +
-                requestTimeout.inSeconds.toString() +
-                ' 秒',
+            '影视站点 API 请求超过 ${requestTimeout.inSeconds} 秒',
           ),
         );
 
@@ -114,14 +111,14 @@ class TvBoxSiteApiClient {
 
         if (response.statusCode != 200) {
           await _cancelStream(response.stream);
-          throw StateError('站点 API 返回 HTTP ' + response.statusCode.toString());
+          throw StateError('站点 API 返回 HTTP ${response.statusCode}');
         }
 
         final declaredLength = response.contentLength;
         if (declaredLength != null && declaredLength > maxResponseBytes) {
           await _cancelStream(response.stream);
           throw FormatException(
-            '站点 API 响应超过 ' + maxResponseBytes.toString() + ' 字节限制',
+            '站点 API 响应超过 ${maxResponseBytes} 字节限制',
           );
         }
 
@@ -129,7 +126,7 @@ class TvBoxSiteApiClient {
         try {
           return utf8.decode(bytes, allowMalformed: false);
         } on FormatException catch (error) {
-          throw FormatException('站点 API 响应不是有效 UTF-8：' + error.message);
+          throw FormatException('站点 API 响应不是有效 UTF-8：${error.message}');
         }
       }
     } finally {
@@ -206,7 +203,7 @@ class TvBoxSiteApiClient {
         totalBytes += chunk.length;
         if (totalBytes > maxResponseBytes) {
           throw FormatException(
-            '站点 API 响应超过 ' + maxResponseBytes.toString() + ' 字节限制',
+            '站点 API 响应超过 ${maxResponseBytes} 字节限制',
           );
         }
         builder.add(chunk);
@@ -221,9 +218,7 @@ class TvBoxSiteApiClient {
     final remaining = deadline.difference(DateTime.now());
     if (remaining <= Duration.zero) {
       throw TimeoutException(
-        '站点 API 请求超过 ' +
-            requestTimeout.inSeconds.toString() +
-            ' 秒',
+        '站点 API 请求超过 ${requestTimeout.inSeconds} 秒',
       );
     }
     return remaining;
