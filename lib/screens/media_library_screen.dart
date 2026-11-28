@@ -26,6 +26,7 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
   List<FavoriteEntry> _favorites = const [];
   List<WatchHistoryEntry> _history = const [];
   bool _loading = true;
+  bool _ownsRepository = false;
   String? _error;
 
   bool get _showFavorites => widget.mode == MediaLibraryMode.favorites;
@@ -39,7 +40,7 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
   @override
   void dispose() {
     final repository = _repository;
-    if (repository != null) {
+    if (_ownsRepository && repository != null) {
       unawaited(repository.close());
     }
     super.dispose();
@@ -56,9 +57,13 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
     try {
       var repository = _repository;
       if (repository == null) {
-        final loader = widget.repositoryLoader ??
-            TvBoxConfigRepository.openForCurrentPlatform;
-        repository = await loader();
+        final injectedLoader = widget.repositoryLoader;
+        if (injectedLoader == null) {
+          repository = await TvBoxConfigRepository.openForCurrentPlatform();
+          _ownsRepository = true;
+        } else {
+          repository = await injectedLoader();
+        }
         _repository = repository;
       }
 
