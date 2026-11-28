@@ -35,14 +35,14 @@ void main() {
         expect(request.followRedirects, isFalse);
         expect(request.headers['accept'], 'application/json');
 
-        return http.Response(
-          jsonEncode({
+        return http.Response.bytes(
+          utf8.encode(jsonEncode({
             'page': 2,
             'pagecount': 3,
             'list': [
               {'vod_id': 7, 'vod_name': '仅作网络层测试的影片'},
             ],
-          }),
+          })),
           200,
         );
       }),
@@ -62,8 +62,8 @@ void main() {
   test('parses detail JSON while leaving playback URLs as inert strings',
       () async {
     final api = client(
-      () => MockClient((request) async => http.Response(
-            jsonEncode({
+      () => MockClient((request) async => http.Response.bytes(
+            utf8.encode(jsonEncode({
               'data': {
                 'vod_id': 'detail-1',
                 'vod_name': '详情测试',
@@ -71,7 +71,7 @@ void main() {
                 'vod_play_url':
                     '第1集\$https://media.example/episode.m3u8',
               },
-            }),
+            })),
             200,
           )),
     );
