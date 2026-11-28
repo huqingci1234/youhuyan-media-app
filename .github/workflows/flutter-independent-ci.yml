@@ -1,0 +1,72 @@
+name: Independent Flutter CI
+
+on:
+  push:
+    branches:
+      - flutter-independent
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "analysis_options.yaml"
+      - ".github/workflows/flutter-independent-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-independent-ci
+  cancel-in-progress: true
+
+jobs:
+  verify-android:
+    name: Flutter 3.50 · analyze, test and Android debug build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout independent Flutter branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter stable 3.50.0
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.50.0"
+          cache: true
+
+      - name: Verify Flutter and Android build environment
+        run: |
+          flutter --version
+          dart --version
+          flutter doctor -v
+
+      - name: Generate Android platform wrapper
+        run: flutter create --platforms=android --org com.youhuyan --project-name youhuyan_media .
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Unit tests
+        run: flutter test --reporter expanded
+
+      - name: Build unsigned Android debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: youhuyan-flutter-independent-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

@@ -1,27 +1,45 @@
-# 尤湖沿影视（Youhuyan Media）
+# 尤湖沿影视｜独立 Flutter 工程
 
-跨平台影视应用项目，当前优先构建 Android 预览版。
+本分支 flutter-independent 专门推进独立 Flutter 客户端，不覆盖 main 分支现有的 Android 构建流程，也不修改 resource-hub 生产配置。
 
-## 当前阶段
-- Flutter Android app foundation
-- TVBox JSON configuration import (metadata only; no remote scripts or binaries are executed)
-- GitHub Actions Android debug APK build
-- No bundled media, streams, or third-party playback sources
+## 当前可验证里程碑
 
-## Build
-GitHub Actions runs on pushes to main and can be triggered manually. The first build is a debug preview APK, not a production-signed release.
+- Flutter 3.50.0 托管 CI：SDK/Android 环境检查、依赖解析、静态分析、单元测试和 Android Debug APK 构建。
+- SQLite 多接口数据模型：多个 JSON 配置可同时保存；HTTPS URL 规范化和重复检测；唯一默认接口。
+- 缓存安全：新 JSON 通过结构校验后才允许事务性替换缓存；校验失败只记录错误状态，保留上次成功 JSON 和成功时间。
+- 离线数据：配置表保存最近一次成功 JSON；收藏和观看历史使用独立表，不依赖配置记录。
+- 远程导入：仅允许 HTTPS，最多跟随 3 次 HTTPS 重定向；20 秒总超时；状态码检查；2 MiB 响应流限制；严格 UTF-8 与 JSON 结构验证。
+- 本地导入：通过系统文件选择器导入 JSON，流式读取并执行同样的 2 MiB 限制及 JSON 校验。
+- 设置界面：多接口列表、添加、重命名、删除、唯一默认切换、刷新、修改 URL 后重新下载验证，以及上次成功/错误状态。
+- 资源目录 V1：从当前默认配置的离线 JSON 缓存读取站点和直播分组；支持按站点名称/标识、直播分组/频道名称本地搜索；远程 API 和播放列表地址仅作为数据保存，不执行远程脚本或自动请求。
+- 媒体数据解析 V1：新增通用影视条目、分页、详情、播放源和集数数据模型；解析常见 TVBox/MacCMS JSON 的 list、data、data.list 结构及 vod_* 字段；播放地址只拆分为惰性字符串，不发起请求、不交给播放器。
+- 站点 API 网络层 V1：新增显式调用的 HTTPS GET 客户端，保留原有查询参数并支持附加分页/搜索参数；手动处理最多 3 次 HTTPS 重定向并拒绝降级；统一总超时、HTTP 200 状态校验、响应大小限制和严格 UTF-8；最后交由影视列表/详情解析器验证 JSON 结构。此服务当前尚未接入资源目录 UI。
+- 收藏/观看历史 Repository V1：收藏增删查、播放进度 upsert、历史读取/清理；按 siteKey:itemId 命名空间保存，不依赖接口配置 ID。
+- 收藏与历史界面 V1：独立导航入口、空状态、收藏取消、单条历史删除、清空历史、播放进度和最近更新时间展示；数据来自 SQLite。
+- 安全边界：导入内容只作为 JSON 数据保存，不执行 spider、脚本、JAR 或未知二进制插件。
 
-## Project principles
-- Only use media sources and playlists that the user owns or is authorized to access.
-- Treat imported configuration as untrusted data.
-- Never execute remote spider scripts, JARs, or downloaded binaries.
-- Respect third-party licenses and attribution requirements.
+## SQLite 与文件选择器平台策略
 
-## Membership plan (planned; not implemented)
-- Basic: free
-- VIP: 6 months CNY 39.9; 12 months CNY 69.9
-- Up to 3 devices per VIP account
-- Initial redemption is administrator-issued codes; no automatic payment integration yet.
+- Android、iOS/iPadOS、macOS：使用 sqflite 原生 SQLite。
+- Windows（以及 CI/单元测试）：使用 sqflite_common_ffi。
+- 本地数据库放在应用私有支持目录。
+- file_picker 文档列出 Android、iOS、macOS、Windows 文件选择支持；各目标仍须实际设备/桌面构建验证。
 
-## License
-Application-specific code in this repository will be licensed separately once third-party dependencies and any reused components have been reviewed. Do not assume the entire app inherits the license of a referenced project.
+## 当前尚未完成
+
+分类/影视列表和详情页面仍未接入真实站点 API；播放器、真实播放进度自动写入及继续观看仍待开发。Android TV 遥控器焦点/文件选择及 Android TV 实机测试尚未完成。Windows/macOS/iOS/iPadOS 平台构建与设备测试仍待执行。会员服务端、哈希兑换码、原子核销、管理员后台和三设备校验尚未实现。
+
+## 会员规则（已确认，尚未实现）
+
+- 基础版永久免费，基础浏览、搜索、点播/直播、收藏和历史不锁入 VIP。
+- VIP：半年 ¥39.9，一年 ¥69.9；每个账号最多 3 台设备。
+- 首期由管理员生成兑换码；核销、套餐和设备权限必须以后端验证为准。
+- 未接入真实支付前，不显示已支付状态或自动开通会员。
+
+## 安全与版权
+
+仅导入用户拥有或获授权的配置和内容。旧配置中的 spider、JAR、live.txt 或其他脚本字段只可作为不执行的数据保存；不下载或运行未知插件，不抓取或分发未经授权的影视资源。
+
+## 本分支验证
+
+推送 flutter-independent 分支会运行 .github/workflows/flutter-independent-ci.yml。CI 成功后上传 14 天有效的 Android Debug APK 构建产物。Debug APK 不能当作正式签名发布包。
